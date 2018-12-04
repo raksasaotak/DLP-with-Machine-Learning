@@ -76,8 +76,8 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
     # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[0] * 100))
     tags = ['public', 'confidential']
     ##cek np.argmax(pred) itu buat apa?
-    print(int(np.argmax(pred)))
-    print("%s sentiment; %f%% confidence" % (tags[np.argmax(pred)], pred[0][np.argmax(pred)] * 100))
+    for i in range(0, len(post)):
+        print("%s sentiment; %f%% confidence" % (tags[int(pred[i][np.argmax(pred)])], pred[i][np.argmax(pred)] * 100))
 
 class Watcher:
 
@@ -173,5 +173,5 @@ if __name__ == '__main__':
             print('list making complete, going into checking session')
             checker()
 
-    except:
-        pass
+    except ValueError as e:
+        print(e)
