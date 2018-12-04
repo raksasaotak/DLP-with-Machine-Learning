@@ -44,8 +44,8 @@ def make_dataset(list_of_file):
                 b += word + ' '
             raw_data['documents'].append(b)
             raw_data['file_name'].append(file)
-        except:
-            pass
+        except ValueError as e:
+            print(e)
     df = pd.DataFrame(raw_data, columns=['documents', 'file_name'])
     df.to_csv('test.csv')
 
