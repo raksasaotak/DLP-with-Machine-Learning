@@ -75,6 +75,7 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
     # score = loaded_model.evaluate(x_post, verbose=1)
     # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[0] * 100))
     tags = ['public', 'confidential']
+    ##cek np.argmax(pred) itu buat apa?
     print(int(np.argmax(pred)))
     print("%s sentiment; %f%% confidence" % (tags[np.argmax(pred)], pred[0][np.argmax(pred)] * 100))
 
