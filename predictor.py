@@ -55,7 +55,8 @@ def list_dupe_del(seq):
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
 
-##TODO bandingin data dari h5 ke inputan
+##TODO cek bug perbandingan h5 ke inputan
+##TODO buat threshold?
 def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
     data = pd.read_csv(csv_file)
     dictionary = pd.read_csv('example_test.csv')
@@ -67,17 +68,22 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
     loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     post = data['documents']
     train_post = dictionary['documents']
+    train_tags = dictionary['tags']
     tokenizer = text.Tokenizer(num_words=1000)
     tokenizer.fit_on_texts(train_post)
     x_post = tokenizer.texts_to_matrix(post)
+    encoder = preprocessing.LabelBinarizer()
+    encoder.fit(train_tags)
+    text_labels = encoder.classes_
     pred = loaded_model.predict(x_post)
-
-    # score = loaded_model.evaluate(x_post, verbose=1)
-    # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[0] * 100))
-    tags = ['public', 'confidential']
-    ##cek np.argmax(pred) itu buat apa?
     for i in range(0, len(post)):
-        print("%s sentiment; %f%% confidence" % (tags[int(pred[i][np.argmax(pred)])], pred[i][np.argmax(pred)] * 100))
+        print("Document %s is %s sentiment; %f%% confidence" % (data['file_name'][i], text_labels[i], pred[i][np.argmax(pred[i], axis=None)] * 100))
+
+##TODO buat trainer nya dulu kalo belom ada h5
+
+##TODO Document tagging
+
+##TODO ACL
 
 class Watcher:
 
@@ -146,10 +152,10 @@ if __name__ == '__main__':
     # w.watch_dir('fix/')
     # w.run()
     changes = []
-    files = os.listdir('fix/') #TODO list dir dari inputan user
-    list = [file for file in files if ".pdf" in file]
-    # make_dataset(list)
-
+    # files = os.listdir('fix/') #TODO list dir dari inputan user
+    # list = [file for file in files if ".pdf" in file]
+    # # make_dataset(list)
+    #
     try:
         while True:
             list = []
