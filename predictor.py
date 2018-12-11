@@ -267,7 +267,7 @@ if __name__ == '__main__':
     if h5_file == '' or h5json_file == '':
         print("No H5 model found, training our ML system according to your file")
         make_dataset(list)
-        # trainer()
+        trainer()
         h5_file='model.h5'
         h5json_file='model.json'
         tokenizer_file='tokenizer.pickle'
