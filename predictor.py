@@ -5,19 +5,24 @@ from keras.models import model_from_json
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing
-from sklearn.externals import joblib
 import time
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import os
-from taki import parser
+from tika import parser
 import keras
+import pickle
+import multiprocessing
+
+##TODO Dokumentasi Codingan, buat variabel rapi
 
 def extract_text(file_path):
+    ##Buat ngambil text dari document, inputnya dari file path
     text = parser.from_file(file_path)
     return text['content']
 
 def preprocess_text(text):
+    ##Buat mecah kalimat dr text, sekaligus menghilangkan karakter-karakter yg ada di filter
     texts = []
     text = keras.preprocessing.text.text_to_word_sequence(text, filters='`!"#$%&()*+,-./:;<=>?@[\]^_{|}~€£“', lower=True, split=' ')
 
@@ -34,6 +39,7 @@ def preprocess_text(text):
     return texts
 
 def make_dataset(list_of_file):
+    ##Ngebuat dataset dari csv
     raw_data = {'documents': [], 'file_name': []}
     for file in list_of_file:
         try:
@@ -49,15 +55,22 @@ def make_dataset(list_of_file):
     df = pd.DataFrame(raw_data, columns=['documents', 'file_name'])
     df.to_csv('test.csv')
 
-##Biar list gaada yang sama
 def list_dupe_del(seq):
+    ##Biar list gaada yang sama, karena kadang file yang sama bisa di modify dan lain2. Fungsinya ini jd biar sekali aja di ceknya
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 ##TODO cek bug perbandingan h5 ke inputan
-##TODO buat threshold?
-def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
+def checker(csv_file='example_test.csv', json_model='model.json', h5_model='model.h5', tokenizer='tokenizer.pickle'):
+    predicted_data = {'filename': [], 'tags': []}
+    old_data = {'filename': [], 'tags': []}
+    try:
+        dlp_file = pd.read_csv('dlp.csv')
+        old_data['filename'].extend(dlp_file['filename'])
+        old_data['tags'].extend(dlp_file['tags'])
+    except:
+        pass
     data = pd.read_csv(csv_file)
     dictionary = pd.read_csv('example_test.csv')
     json_file = open(json_model, 'r')
@@ -65,28 +78,114 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5'):
     json_file.close()
     loaded_model = model_from_json(loaded_json_model)
     loaded_model.load_weights(h5_model)
-    loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
     post = data['documents']
-    train_post = dictionary['documents']
     train_tags = dictionary['tags']
-    tokenizer = text.Tokenizer(num_words=1000)
-    tokenizer.fit_on_texts(train_post)
+    # loading
+    with open(tokenizer, 'rb') as handle:
+        tokenizer = pickle.load(handle)
+
     x_post = tokenizer.texts_to_matrix(post)
     encoder = preprocessing.LabelBinarizer()
     encoder.fit(train_tags)
     text_labels = encoder.classes_
-    pred = loaded_model.predict(x_post)
+    pred = loaded_model.predict(np.array(x_post))
+    #predicted_label = text_labels[np.argmax(prediction[0])]
     for i in range(0, len(post)):
-        print("Document %s is %s sentiment; %f%% confidence" % (data['file_name'][i], text_labels[i], pred[i][np.argmax(pred[i], axis=None)] * 100))
+        print("Document %s is %s sentiment; %f%% confidence" % (data['filename'][i], text_labels[np.argmax(pred[i])], pred[i][np.argmax(pred[i])] * 100))
+        predicted_data['filename'].append(data['filename'][i])
+        predicted_data['tags'].append(text_labels[np.argmax(pred[i])])
+
+    if not old_data:
+        df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
+        df.to_csv('dlp.csv')
+
+    else:
+        df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
+        old_df = pd.DataFrame(old_data, columns=['filename', 'tags'])
+        for i in range(0, len(predicted_data['filename'])):
+            old_df.loc[old_df.filename == predicted_data['filename'][i], 'tags'] = predicted_data['tags'][i]
+        old_df = old_df.append(df)
+        old_df = old_df.drop_duplicates()
+        old_df = old_df.reset_index(drop=True)
+        old_df.to_csv('dlp.csv')
 
 ##TODO buat trainer nya dulu kalo belom ada h5
+def trainer(dict_csv='example_test.csv'):
+    data = pd.read_csv(dict_csv)
+    train_size = int(len(data) * .7)
+    train_posts = data['documents'][:train_size]
+    train_tags = data['tags'][:train_size]
+    test_posts = data['documents'][train_size:]
+    test_tags = data['tags'][train_size:]
+    vocab_size = 10000
+    tokenize = text.Tokenizer(num_words=vocab_size)
+    tokenize.fit_on_texts(train_posts)
+    #save token
+    with open('tokenizer.pickle', 'wb') as handle:
+        pickle.dump(tokenize, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        print("Saving tokenizer with name tokenizer.pickle")
 
-##TODO Document tagging
+    x_train = tokenize.texts_to_matrix(train_posts)
+    x_test = tokenize.texts_to_matrix(test_posts)
+
+    encoder = preprocessing.LabelBinarizer()
+    encoder.fit(train_tags)
+    y_train = encoder.transform(train_tags)
+    y_test = encoder.transform(test_tags)
+
+    num_labels = len(np.unique(y_train))
+    batch_size = 1024
+    model = Sequential()
+
+    ##Buat hidden layer, gunanya buat naikin akurasi
+    model.add(Dense(256, input_shape=(vocab_size,)))
+    model.add(Activation('relu'))
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+    model.add(Dense(256))
+    model.add(Activation('relu'))
+
+    model.add(Dense(num_labels))
+    model.add(Activation('softmax'))
+
+    model.compile(loss='sparse_categorical_crossentropy',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+
+    history = model.fit(x_train, y_train,
+                        batch_size=batch_size,
+                        epochs=256,
+                        verbose=1,
+                        validation_split=0.1)
+
+    score = model.evaluate(x_test, y_test,batch_size=batch_size, verbose=1)
+    model_json = model.to_json()
+    with open("model.json", "w") as json_file:
+        json_file.write(model_json)
+        print("\n Saved h5 json model to disk with name model.json ")
+
+    model.save_weights("model.h5")
+    print("\n Saved model to disk with name model.h5")
+
+    json_file = open('model.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    print("Training done")
+
+    # loaded_model = model_from_json(loaded_model_json)
+
+    # loaded_model.load_weights("model.h5")
+    # print("Loaded model from disk")
+    #
+    # loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # score = loaded_model.evaluate(x_test, y_test, verbose=1)
+    # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 ##TODO ACL
 
 class Watcher:
-
+    ##TODO directorynya dari inputan user
     DIRECTORY_TO_WATCH = ''
 
     def __init__(self):
@@ -109,6 +208,8 @@ class Watcher:
         self.observer.join()
 
 class Handler(FileSystemEventHandler):
+
+    ##Untuk sekarang cuma kalo file di buat, di modify, atau di move baru watchernya logging. Gunanya watcher untuk kalo ada file baru atau yg di edit bakal di extract textnya buat di cek confidential atau enggak
     @staticmethod
     def on_any_event(event):
         new_file = []
@@ -139,45 +240,59 @@ class Handler(FileSystemEventHandler):
             changelog.write('moved, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
             changelog.close()
 
-        elif event.event_type == 'deleted':
-            # Taken any action here when a file is deleted.
-            print ("Received deleted event - %s." % event.src_path)
-            new_file.append(event.src_path.split('/')[-1:])
-            changelog = open('clog.txt', 'a')
-            changelog.write('deleted, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-            changelog.close()
+        # elif event.event_type == 'deleted':
+        #     # Taken any action here when a file is deleted.
+        #     print ("Received deleted event - %s." % event.src_path)
+        #     new_file.append(event.src_path.split('/')[-1:])
+        #     changelog = open('clog.txt', 'a')
+        #     changelog.write('deleted, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+        #     changelog.close()
+
+def dir_watch(dir_to_watch='fix/'):
+    w = Watcher()
+    w.watch_dir(dir_to_watch)
+    w.run()
 
 if __name__ == '__main__':
-    # w = Watcher()
-    # w.watch_dir('fix/')
-    # w.run()
-    changes = []
-    # files = os.listdir('fix/') #TODO list dir dari inputan user
-    # list = [file for file in files if ".pdf" in file]
-    # # make_dataset(list)
-    #
-    try:
-        while True:
-            list = []
-            #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-            time.sleep(5)
-            clog = open('clog.txt','r')
-            for line in clog:
-                line = line.split(', ')
-                line = ''.join(line[-1:])
-                line = line.replace('\n','')
-                changes.append(line)
-            changes = list_dupe_del(changes)
-            clog.close()
-            #biar clog.txt-nya bersih
-            # clog = open('clog.txt','w')
-            # clog.close()
 
-            list.extend(file for file in changes if ".pdf" in file)
-            make_dataset(list)
-            print(list)
-            print('list making complete, going into checking session')
-            checker()
+    changes = []
+    ##TODO cek dari config.ini, atau settings.ini
+    ##TODO cek ada h5 ga
+    h5_file = ''#Kalo ada file h5 masukin kesini
+    h5json_file = ''#Kalo ada file h5 json masukin kesini
+    tokenizer_file = ''#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
+    files = os.listdir('fix/') #TODO list dir dari inputan user
+    list = [file for file in files if ".pdf" in file] #Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
+
+    if h5_file == '' or h5json_file == '':
+        print("No H5 model found, training our ML system according to your file")
+        make_dataset(list)
+        # trainer()
+        h5_file='model.h5'
+        h5json_file='model.json'
+        tokenizer_file='tokenizer.pickle'
+
+    try:
+      #  while True:
+        list = []
+        #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
+        time.sleep(5)
+        clog = open('clog.txt','r')
+        for line in clog:
+            line = line.split(', ')
+            line = ''.join(line[-1:])
+            line = line.replace('\n','')
+            changes.append(line)
+        changes = list_dupe_del(changes)
+        clog.close()
+        #biar clog.txt-nya bersih
+        # clog = open('clog.txt','w')
+        # clog.close()
+
+        list.extend(file for file in changes if ".pdf" in file)
+        make_dataset(list)
+        print('list making complete, going into checking session')
+        checker()
 
     except ValueError as e:
         print(e)
