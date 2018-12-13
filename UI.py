@@ -48,7 +48,7 @@ class App(QMainWindow, QWidget):
         super().__init__()
         Left = GetSystemMetrics(0)
         Top = GetSystemMetrics(1)
-        Width = 600
+        Width = 500
         Height = 300
         self.title = 'MyDlPy'
         self.left = (Left / 2) - (Width / 2)
