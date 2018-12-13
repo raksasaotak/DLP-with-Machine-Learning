@@ -1,7 +1,7 @@
 import configparser
 import sys
 
-from PyQt5.QtCore import pyqtSlot, QTimer
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QLabel, QPushButton, QWidget, QAction, QMainWindow, QFileDialog, QLineEdit)
 from win32api import GetSystemMetrics
@@ -37,7 +37,16 @@ class Config():
 
             with open(self.conf_file, 'w') as configfile:
                 parser.write(configfile)
-                configfile.close()
+        else:
+            try:
+                parser.set('folder_protect', 'folder', folder[0])
+                parser.set('machine_learning', 'h5', path[0])
+                parser.set('machine_learning', 'weight', path[1])
+            except:
+                pass
+
+            with open(self.conf_file, 'w') as configfile:
+                parser.write(configfile)
 
 
 
@@ -50,7 +59,7 @@ class App(QMainWindow, QWidget):
         Top = GetSystemMetrics(1)
         Width = 500
         Height = 300
-        self.title = 'MyDlPy'
+        self.title = 'MyDLPy'
         self.left = (Left / 2) - (Width / 2)
         self.top = (Top / 2) - (Height / 2)
         self.width = Width
@@ -131,10 +140,12 @@ class App(QMainWindow, QWidget):
             pass
 
     def openFolderDialog(self):
-        folderName = QFileDialog.getExistingDirectory(self, "Select your folder","C:\\",  QFileDialog.ShowDirsOnly)
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        folderName = QFileDialog.getExistingDirectory(self, "Select your folder",".",
+                                                      options=options)
         folder.insert(0, folderName)
         print(folder[0])
-        print("1")
 
     def openFileNameDialog(self):
         options = QFileDialog.Options()
