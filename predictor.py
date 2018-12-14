@@ -118,6 +118,8 @@ def trainer(dict_csv='example_test.csv'):
     train_tags = data['tags'][:train_size]
     test_posts = data['documents'][train_size:]
     test_tags = data['tags'][train_size:]
+    posts = data['documents']
+    dlp_data = {'filename': [], 'tags': []}
     vocab_size = 10000
     tokenize = text.Tokenizer(num_words=vocab_size)
     tokenize.fit_on_texts(train_posts)
@@ -128,11 +130,13 @@ def trainer(dict_csv='example_test.csv'):
 
     x_train = tokenize.texts_to_matrix(train_posts)
     x_test = tokenize.texts_to_matrix(test_posts)
+    x_post = tokenize.texts_to_matrix(posts)
 
     encoder = preprocessing.LabelBinarizer()
     encoder.fit(train_tags)
     y_train = encoder.transform(train_tags)
     y_test = encoder.transform(test_tags)
+    text_labels = encoder.classes_
 
     num_labels = len(np.unique(y_train))
     batch_size = 1024
@@ -167,12 +171,18 @@ def trainer(dict_csv='example_test.csv'):
 
     model.save_weights("model.h5")
     print("\n Saved model to disk with name model.h5")
-
-    json_file = open('model.json', 'r')
-    loaded_model_json = json_file.read()
-    json_file.close()
     print("Training done")
 
+    pred = model.predict(np.array(x_post))
+    for i in range(0, len(posts)):
+        print('Document name: %s, is %s' % (data['filename'][i], text_labels[np.argmax(pred[i])]))
+        dlp_data['filename'].append(data['filename'][i])
+        dlp_data['tags'].append(text_labels[np.argmax(pred[i])])
+
+    df = pd.DataFrame(dlp_data, columns=['filename', 'tags'])
+    df.to_csv('dlp.csv')
+
+    print('Saved CSV model')
     # loaded_model = model_from_json(loaded_model_json)
 
     # loaded_model.load_weights("model.h5")
@@ -273,26 +283,26 @@ if __name__ == '__main__':
         tokenizer_file='tokenizer.pickle'
 
     try:
-      #  while True:
-        list = []
-        #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-        time.sleep(5)
-        clog = open('clog.txt','r')
-        for line in clog:
-            line = line.split(', ')
-            line = ''.join(line[-1:])
-            line = line.replace('\n','')
-            changes.append(line)
-        changes = list_dupe_del(changes)
-        clog.close()
-        #biar clog.txt-nya bersih
-        # clog = open('clog.txt','w')
-        # clog.close()
+        while True:
+            list = []
+            #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
+            time.sleep(15)
+            clog = open('clog.txt','r')
+            for line in clog:
+                line = line.split(', ')
+                line = ''.join(line[-1:])
+                line = line.replace('\n','')
+                changes.append(line)
+            changes = list_dupe_del(changes)
+            clog.close()
+            #biar clog.txt-nya bersih
+            # clog = open('clog.txt','w')
+            # clog.close()
 
-        list.extend(file for file in changes if ".pdf" in file)
-        make_dataset(list)
-        print('list making complete, going into checking session')
-        checker()
+            list.extend(file for file in changes if ".pdf" in file)
+            make_dataset(list)
+            print('list making complete, going into checking session')
+            checker()
 
     except ValueError as e:
         print(e)
