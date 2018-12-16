@@ -1,7 +1,7 @@
 import configparser
 import sys
 
-from pip install pywin32.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QApplication, QLabel, QPushButton, QWidget, QAction, QMainWindow, QFileDialog, QLineEdit)
 from win32api import GetSystemMetrics
