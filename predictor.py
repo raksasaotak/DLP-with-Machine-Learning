@@ -12,7 +12,6 @@ import os
 from tika import parser
 import keras
 import pickle
-import multiprocessing
 
 ##TODO Dokumentasi Codingan, buat variabel rapi
 
@@ -65,12 +64,14 @@ def list_dupe_del(seq):
 def checker(csv_file='example_test.csv', json_model='model.json', h5_model='model.h5', tokenizer='tokenizer.pickle'):
     predicted_data = {'filename': [], 'tags': []}
     old_data = {'filename': [], 'tags': []}
+
     try:
         dlp_file = pd.read_csv('dlp.csv')
         old_data['filename'].extend(dlp_file['filename'])
         old_data['tags'].extend(dlp_file['tags'])
     except:
         pass
+
     data = pd.read_csv(csv_file)
     dictionary = pd.read_csv('example_test.csv')
     json_file = open(json_model, 'r')
@@ -96,19 +97,14 @@ def checker(csv_file='example_test.csv', json_model='model.json', h5_model='mode
         predicted_data['filename'].append(data['filename'][i])
         predicted_data['tags'].append(text_labels[np.argmax(pred[i])])
 
-    if not old_data:
-        df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
-        df.to_csv('dlp.csv')
-
-    else:
-        df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
-        old_df = pd.DataFrame(old_data, columns=['filename', 'tags'])
-        for i in range(0, len(predicted_data['filename'])):
-            old_df.loc[old_df.filename == predicted_data['filename'][i], 'tags'] = predicted_data['tags'][i]
-        old_df = old_df.append(df)
-        old_df = old_df.drop_duplicates()
-        old_df = old_df.reset_index(drop=True)
-        old_df.to_csv('dlp.csv')
+    df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
+    old_df = pd.DataFrame(old_data, columns=['filename', 'tags'])
+    for i in range(0, len(predicted_data['filename'])):
+        old_df.loc[old_df.filename == predicted_data['filename'][i], 'tags'] = predicted_data['tags'][i]
+    old_df = old_df.append(df)
+    old_df = old_df.drop_duplicates()
+    old_df = old_df.reset_index(drop=True)
+    old_df.to_csv('dlp.csv')
 
 ##TODO buat trainer nya dulu kalo belom ada h5
 def trainer(dict_csv='example_test.csv'):
@@ -120,7 +116,7 @@ def trainer(dict_csv='example_test.csv'):
     test_tags = data['tags'][train_size:]
     posts = data['documents']
     dlp_data = {'filename': [], 'tags': []}
-    vocab_size = 10000
+    vocab_size = 1000
     tokenize = text.Tokenizer(num_words=vocab_size)
     tokenize.fit_on_texts(train_posts)
     #save token
