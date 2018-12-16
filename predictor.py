@@ -52,7 +52,7 @@ def make_dataset(list_of_file):
         except ValueError as e:
             print(e)
     df = pd.DataFrame(raw_data, columns=['documents', 'file_name'])
-    df.to_csv('test.csv')
+    df.to_csv('test.csv', encoding="utf-8")
 
 def list_dupe_del(seq):
     ##Biar list gaada yang sama, karena kadang file yang sama bisa di modify dan lain2. Fungsinya ini jd biar sekali aja di ceknya
@@ -66,14 +66,14 @@ def checker(csv_file='example_test.csv', json_model='model.json', h5_model='mode
     old_data = {'filename': [], 'tags': []}
 
     try:
-        dlp_file = pd.read_csv('dlp.csv')
+        dlp_file = pd.read_csv('dlp.csv', encoding='utf-8')
         old_data['filename'].extend(dlp_file['filename'])
         old_data['tags'].extend(dlp_file['tags'])
     except:
         pass
 
     data = pd.read_csv(csv_file)
-    dictionary = pd.read_csv('example_test.csv')
+    dictionary = pd.read_csv('example_test.csv', encoding='utf-8')
     json_file = open(json_model, 'r')
     loaded_json_model = json_file.read()
     json_file.close()
@@ -91,11 +91,10 @@ def checker(csv_file='example_test.csv', json_model='model.json', h5_model='mode
     encoder.fit(train_tags)
     text_labels = encoder.classes_
     pred = loaded_model.predict(np.array(x_post))
-    #predicted_label = text_labels[np.argmax(prediction[0])]
     for i in range(0, len(post)):
         print("Document %s is %s sentiment; %f%% confidence" % (data['filename'][i], text_labels[np.argmax(pred[i])], pred[i][np.argmax(pred[i])] * 100))
-        predicted_data['filename'].append(data['filename'][i])
-        predicted_data['tags'].append(text_labels[np.argmax(pred[i])])
+        predicted_data['filename'].append(data['filename'][i].encode("utf-8", "surrogateescape").decode())
+        predicted_data['tags'].append(text_labels[np.argmax(pred[i])].encode("utf-8", "surrogateescape").decode())
 
     df = pd.DataFrame(predicted_data, columns=['filename', 'tags'])
     old_df = pd.DataFrame(old_data, columns=['filename', 'tags'])
@@ -104,7 +103,7 @@ def checker(csv_file='example_test.csv', json_model='model.json', h5_model='mode
     old_df = old_df.append(df)
     old_df = old_df.drop_duplicates()
     old_df = old_df.reset_index(drop=True)
-    old_df.to_csv('dlp.csv')
+    old_df.to_csv('dlp.csv', encoding="utf-8")
 
 ##TODO buat trainer nya dulu kalo belom ada h5
 def trainer(dict_csv='example_test.csv'):
@@ -116,7 +115,7 @@ def trainer(dict_csv='example_test.csv'):
     test_tags = data['tags'][train_size:]
     posts = data['documents']
     dlp_data = {'filename': [], 'tags': []}
-    vocab_size = 1000
+    vocab_size = 10000
     tokenize = text.Tokenizer(num_words=vocab_size)
     tokenize.fit_on_texts(train_posts)
     #save token
@@ -176,7 +175,7 @@ def trainer(dict_csv='example_test.csv'):
         dlp_data['tags'].append(text_labels[np.argmax(pred[i])])
 
     df = pd.DataFrame(dlp_data, columns=['filename', 'tags'])
-    df.to_csv('dlp.csv')
+    df.to_csv('dlp.csv', encoding="utf-8")
 
     print('Saved CSV model')
     # loaded_model = model_from_json(loaded_model_json)
@@ -269,7 +268,6 @@ if __name__ == '__main__':
     tokenizer_file = ''#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
     files = os.listdir('fix/') #TODO list dir dari inputan user
     list = [file for file in files if ".pdf" in file] #Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
-
     if h5_file == '' or h5json_file == '':
         print("No H5 model found, training our ML system according to your file")
         make_dataset(list)
@@ -282,7 +280,6 @@ if __name__ == '__main__':
         while True:
             list = []
             #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-            time.sleep(15)
             clog = open('clog.txt','r')
             for line in clog:
                 line = line.split(', ')
@@ -299,6 +296,7 @@ if __name__ == '__main__':
             make_dataset(list)
             print('list making complete, going into checking session')
             checker()
+            time.sleep(5)
 
     except ValueError as e:
         print(e)
