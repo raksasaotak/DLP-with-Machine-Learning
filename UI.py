@@ -147,10 +147,13 @@ class App(QMainWindow, QWidget):
         os.system('python runCsv.py')
 
     def on_click(self):
+        parser.read('testong.ini')
         try:
-            parser.read('testong.ini')
             self.h5line.setText(parser.get('machine_learning', 'h5'))
             self.weightLine.setText(parser.get('machine_learning', 'weight'))
+        except:
+            pass
+        try:
             self.folderLine.setText(parser.get('folder_protect', 'folder'))
         except:
             pass
