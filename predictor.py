@@ -6,8 +6,6 @@ import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 import time
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import os
 from tika import parser
 import keras
@@ -192,75 +190,6 @@ def trainer(dict_csv='example_test.csv'):
 
 ##TODO ACL
 
-class Watcher:
-    ##TODO directorynya dari inputan user
-    DIRECTORY_TO_WATCH = ''
-
-    def __init__(self):
-        self.observer = Observer()
-
-    def watch_dir(self, what_dir):
-        self.DIRECTORY_TO_WATCH = what_dir
-
-    def run(self):
-        event_handler = Handler()
-        self.observer.schedule(event_handler, self.DIRECTORY_TO_WATCH, recursive=True)
-        self.observer.start()
-        try:
-            while True:
-                time.sleep(1)
-        except:
-            self.observer.stop()
-            print ("Error")
-
-        self.observer.join()
-
-class Handler(FileSystemEventHandler):
-
-    ##Untuk sekarang cuma kalo file di buat, di modify, atau di move baru watchernya logging. Gunanya watcher untuk kalo ada file baru atau yg di edit bakal di extract textnya buat di cek confidential atau enggak
-    @staticmethod
-    def on_any_event(event):
-        new_file = []
-        if event.is_directory:
-            return None
-
-        elif event.event_type == 'created':
-            # Take any action here when a file is first created.
-            print ("Received created event - %s." % event.src_path)
-            new_file.append(event.src_path.split('/')[-1:])
-            changelog = open('clog.txt','a')
-            changelog.write('created, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-            changelog.close()
-
-        elif event.event_type == 'modified':
-            # Taken any action here when a file is modified.
-            print ("Received modified event - %s." % event.src_path)
-            new_file.append(event.src_path.split('/')[-1:])
-            changelog = open('clog.txt', 'a')
-            changelog.write('modified, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-            changelog.close()
-
-        elif event.event_type == 'moved':
-            # Taken any action here when a file is moved.
-            print ("Received moved event - %s." % event.src_path)
-            new_file.append(event.src_path.split('/')[-1:])
-            changelog = open('clog.txt', 'a')
-            changelog.write('moved, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-            changelog.close()
-
-        # elif event.event_type == 'deleted':
-        #     # Taken any action here when a file is deleted.
-        #     print ("Received deleted event - %s." % event.src_path)
-        #     new_file.append(event.src_path.split('/')[-1:])
-        #     changelog = open('clog.txt', 'a')
-        #     changelog.write('deleted, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-        #     changelog.close()
-
-def dir_watch(dir_to_watch='fix/'):
-    w = Watcher()
-    w.watch_dir(dir_to_watch)
-    w.run()
-
 if __name__ == '__main__':
 
     changes = []
@@ -272,8 +201,8 @@ if __name__ == '__main__':
     tokenizer_file = ''#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
     files = ps.get('folder_protect', 'folder') #TODO list dir dari inputan user
     list = [file for file in files if ".pdf" in file] #Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
-    if h5_file == '' or h5json_file == '':
-        print("No H5 model found, training our ML system according to your file")
+    if h5_file == '' or h5json_file == '' or tokenizer_file == '':
+        print("No H5 / Tokenizer model found, training our ML system according to your file")
         make_dataset(list)
         trainer()
         h5_file='model.h5'
