@@ -12,6 +12,9 @@ import os
 from tika import parser
 import keras
 import pickle
+import configparser
+
+ps = configparser.ConfigParser()
 
 ##TODO Dokumentasi Codingan, buat variabel rapi
 
@@ -263,10 +266,11 @@ if __name__ == '__main__':
     changes = []
     ##TODO cek dari config.ini, atau settings.ini
     ##TODO cek ada h5 ga
-    h5_file = ''#Kalo ada file h5 masukin kesini
-    h5json_file = ''#Kalo ada file h5 json masukin kesini
+    ps.read('testong.ini')
+    h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
+    h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
     tokenizer_file = ''#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
-    files = os.listdir('fix/') #TODO list dir dari inputan user
+    files = ps.get('folder_protect', 'folder') #TODO list dir dari inputan user
     list = [file for file in files if ".pdf" in file] #Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
     if h5_file == '' or h5json_file == '':
         print("No H5 model found, training our ML system according to your file")
