@@ -31,6 +31,9 @@ class Config():
                 parser.add_section('machine_learning')
                 parser.set('machine_learning', 'h5', path[0])
                 parser.set('machine_learning', 'weight', path[1])
+            except:
+                pass
+            try:
                 parser.add_section('folder_protect')
                 parser.set('folder_protect', 'folder', folder[0])
             except:
@@ -128,10 +131,18 @@ class App(QMainWindow, QWidget):
         button.clicked.connect(Config)
         button.clicked.connect(self.on_click)
 
+        button = QPushButton('Start!', self)
+        button.setToolTip('Start your service')
+        button.move(200, 200)
+        button.clicked.connect(Config)
+        button.clicked.connect(self.run_Service)
+
         self.show()
 
     @pyqtSlot()
-
+    def run_Service(self):
+        os.system('python watcher.py')
+        os.system('python Predictor.py')
     def run_Csv(self):
         os.system('python runCsv.py')
 
