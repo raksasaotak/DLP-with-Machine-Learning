@@ -1,5 +1,6 @@
 import configparser
 import sys
+import os
 
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QIcon
@@ -91,7 +92,7 @@ class App(QMainWindow, QWidget):
         editAcess = QAction('Edit File Access', self)
         editAcess.setShortcut('Ctrl+E')
         editAcess.setStatusTip('edit your file access')
-        editAcess.triggered.connect(self.openFileNameDialog)
+        editAcess.triggered.connect(self.run_Csv)
         editMenu.addAction(editAcess)
 
         openFolder = QAction('Import protected folder', self)
@@ -130,6 +131,10 @@ class App(QMainWindow, QWidget):
         self.show()
 
     @pyqtSlot()
+
+    def run_Csv(self):
+        os.system('python runCsv.py')
+
     def on_click(self):
         try:
             parser.read('testong.ini')
