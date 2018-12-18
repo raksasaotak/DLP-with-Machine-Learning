@@ -11,6 +11,8 @@ from tika import parser
 import keras
 import pickle
 import configparser
+import win32security
+import ntsecuritycon as con
 
 ps = configparser.ConfigParser()
 
@@ -189,6 +191,74 @@ def trainer(dict_csv='example_test.csv'):
     # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 ##TODO ACL
+def acl(dlp = 'dlp.csv'):
+    # ALWAYS RUN THIS SCRIPT AS ADMIN OTHERWISE YOU CANT CHANGE OTHERS PERMISSION
+    # show accesss control list, from a file
+    dlp_file = pd.read_csv(dlp)
+    directory = ps.get('folder_protect', 'folder')
+    for row in range(0, len(dlp_file)):
+        print(directory + dlp_file['filename'][row])
+        if (dlp_file['tags'][row] == 'confidential'):
+            # fucntion to get and set ACL
+            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
+                                                        win32security.DACL_SECURITY_INFORMATION)
+            # funtion to get owner info of a file
+            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
+                                                       win32security.OWNER_SECURITY_INFORMATION)
+
+            # lookup for SID of user
+            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
+            admins, domain, type = win32security.LookupAccountName("", "Administrators")
+            owner_sid = owner_info.GetSecurityDescriptorOwner()
+
+            # open(directory+dlp_file['filename'][row], "r").close()
+            show_cacls(directory + dlp_file['filename'][row])
+
+            # set permission
+            dacl = win32security.ACL()
+            dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
+                                     owner_sid)
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, admins)
+
+            # EXECUTE ORDER 66!!!
+            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
+            win32security.SetFileSecurity(directory + dlp_file['filename'][row],
+                                          win32security.DACL_SECURITY_INFORMATION, access_info)
+            show_cacls(directory + dlp_file['filename'][row])
+
+        elif (dlp_file['tags'][row] == 'public'):
+            # fucntion to get and set ACL
+            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
+                                                        win32security.DACL_SECURITY_INFORMATION)
+            # funtion to get owner info of a file
+            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
+                                                       win32security.OWNER_SECURITY_INFORMATION)
+
+            # lookup for SID of user
+            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
+            admins, domain, type = win32security.LookupAccountName("", "Administrators")
+            owner_sid = owner_info.GetSecurityDescriptorOwner()
+
+            # open(directory+dlp_file['filename'][row], "r").close()
+            show_cacls(directory + dlp_file['filename'][row])
+
+            # set permission
+            dacl = win32security.ACL()
+            # dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
+            # dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
+            #                          owner_sid)
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, everyone)
+
+            # EXECUTE ORDER 66!!!
+            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
+            win32security.SetFileSecurity(directory + dlp_file['filename'][row],
+                                          win32security.DACL_SECURITY_INFORMATION, access_info)
+            show_cacls(directory + dlp_file['filename'][row])
+
+def show_cacls(filename):
+    for line in os.popen("cacls %s" % filename).read().splitlines():
+        print(line)
 
 if __name__ == '__main__':
 
@@ -229,7 +299,8 @@ if __name__ == '__main__':
             make_dataset(list)
             print('list making complete, going into checking session')
             checker()
-            time.sleep(5)
+            acl()
+            time.sleep(60)
 
     except ValueError as e:
         print(e)
