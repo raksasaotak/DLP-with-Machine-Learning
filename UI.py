@@ -11,6 +11,7 @@ parser = configparser.ConfigParser()
 
 path = []
 folder = []
+pickle =[]
 
 
 class Config():
@@ -38,6 +39,11 @@ class Config():
                 parser.set('folder_protect', 'folder', folder[0])
             except:
                 pass
+            try:
+                parser.add_section('pickle_file')
+                parser.set('pickle_file', 'pickle', pickle[0])
+            except:
+                pass
 
             with open(self.conf_file, 'w') as configfile:
                 parser.write(configfile)
@@ -46,6 +52,7 @@ class Config():
                 parser.set('folder_protect', 'folder', folder[0])
                 parser.set('machine_learning', 'h5', path[0])
                 parser.set('machine_learning', 'weight', path[1])
+                parser.set('pickle_file', 'pickle', pickle[0])
             except:
                 pass
 
@@ -110,9 +117,12 @@ class App(QMainWindow, QWidget):
         self.weightLabel.setText('Weight: ')
         self.folderLabel = QLabel(self)
         self.folderLabel.setText('Folder: ')
+        self.pickleLabel = QLabel(self)
+        self.pickleLabel.setText('Pickle: ')
         self.h5line = QLineEdit(self)
         self.weightLine = QLineEdit(self)
         self.folderLine = QLineEdit(self)
+        self.pickleLine = QLineEdit(self)
 
         self.h5line.move(80, 20)
         self.h5line.resize(400, 32)
@@ -120,20 +130,23 @@ class App(QMainWindow, QWidget):
         self.weightLine.resize(400, 32)
         self.folderLine.move(80, 100)
         self.folderLine.resize(400, 32)
+        self.pickleLine.move(80,140)
+        self.pickleLine.resize(400,32)
         self.h5Label.move(20, 20)
         self.weightLabel.move(20, 60)
         self.folderLabel.move(20, 100)
+        self.pickleLabel.move(20,140)
 
 
         button = QPushButton('Validate!', self)
         button.setToolTip('Validate the H5 and Weight model')
-        button.move(200, 150)
+        button.move(200, 180)
         button.clicked.connect(Config)
         button.clicked.connect(self.on_click)
 
         button = QPushButton('Start!', self)
         button.setToolTip('Start your service')
-        button.move(200, 200)
+        button.move(200, 220)
         button.clicked.connect(Config)
         button.clicked.connect(self.run_Service)
 
@@ -151,6 +164,7 @@ class App(QMainWindow, QWidget):
         try:
             self.h5line.setText(parser.get('machine_learning', 'h5'))
             self.weightLine.setText(parser.get('machine_learning', 'weight'))
+            self.pickleLine.setText(parser.get('pickle_file', 'pickle'))
         except:
             pass
         try:
@@ -170,7 +184,7 @@ class App(QMainWindow, QWidget):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self, "Select your model", "",
-                                                  "All Files (*);;h5 Files (*.h5);;json Files (*.json)",
+                                                  "All Files (*);;h5 Files (*.h5);;json Files (*.json);; pickle Files(*.pickle)",
                                                   options=options)
         print(fileName)
         if ".h5" in fileName:
@@ -179,6 +193,9 @@ class App(QMainWindow, QWidget):
         elif ".json" in fileName:
             path.insert(1, fileName)
             print(path[1])
+        elif ".pickle" in fileName:
+            pickle.insert(0, fileName)
+            print(pickle[0])
         else:
             print("unrecognizeable")
 
