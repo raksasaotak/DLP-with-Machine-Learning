@@ -1,6 +1,9 @@
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import configparser
 import time
+
+parser = configparser.ConfigParser()
 
 class Watcher:
     ##TODO directorynya dari inputan user
@@ -67,6 +70,8 @@ class Handler(FileSystemEventHandler):
         #     changelog.close()
 
 if __name__ == '__main__':
+        conf_File = 'testong.ini'
+        parser.read(conf_File)
         w = Watcher()
-        w.watch_dir('fix/') #Ganti directorynya disini
+        w.watch_dir(parser.get('folder_protect', 'folder')) #Ganti directorynya disini
         w.run()
