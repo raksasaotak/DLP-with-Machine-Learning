@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 import os
 from tika import parser
 import keras
 import pickle
 import configparser
-import win32security
-import ntsecuritycon as con
 
 ps = configparser.ConfigParser()
 
@@ -191,74 +191,75 @@ def trainer(dict_csv='example_test.csv'):
     # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 ##TODO ACL
-def acl(dlp = 'dlp.csv'):
-    # ALWAYS RUN THIS SCRIPT AS ADMIN OTHERWISE YOU CANT CHANGE OTHERS PERMISSION
-    # show accesss control list, from a file
-    dlp_file = pd.read_csv(dlp)
-    directory = ps.get('folder_protect', 'folder')
-    for row in range(0, len(dlp_file)):
-        print(directory + dlp_file['filename'][row])
-        if (dlp_file['tags'][row] == 'confidential'):
-            # fucntion to get and set ACL
-            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
-                                                        win32security.DACL_SECURITY_INFORMATION)
-            # funtion to get owner info of a file
-            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
-                                                       win32security.OWNER_SECURITY_INFORMATION)
 
-            # lookup for SID of user
-            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
-            admins, domain, type = win32security.LookupAccountName("", "Administrators")
-            owner_sid = owner_info.GetSecurityDescriptorOwner()
+class Watcher:
+    ##TODO directorynya dari inputan user
+    DIRECTORY_TO_WATCH = ''
 
-            # open(directory+dlp_file['filename'][row], "r").close()
-            show_cacls(directory + dlp_file['filename'][row])
+    def __init__(self):
+        self.observer = Observer()
 
-            # set permission
-            dacl = win32security.ACL()
-            dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
-            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
-                                     owner_sid)
-            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, admins)
+    def watch_dir(self, what_dir):
+        self.DIRECTORY_TO_WATCH = what_dir
 
-            # EXECUTE ORDER 66!!!
-            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
-            win32security.SetFileSecurity(directory + dlp_file['filename'][row],
-                                          win32security.DACL_SECURITY_INFORMATION, access_info)
-            show_cacls(directory + dlp_file['filename'][row])
+    def run(self):
+        event_handler = Handler()
+        self.observer.schedule(event_handler, self.DIRECTORY_TO_WATCH, recursive=True)
+        self.observer.start()
+        try:
+            while True:
+                time.sleep(1)
+        except:
+            self.observer.stop()
+            print ("Error")
 
-        elif (dlp_file['tags'][row] == 'public'):
-            # fucntion to get and set ACL
-            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
-                                                        win32security.DACL_SECURITY_INFORMATION)
-            # funtion to get owner info of a file
-            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],
-                                                       win32security.OWNER_SECURITY_INFORMATION)
+        self.observer.join()
 
-            # lookup for SID of user
-            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
-            admins, domain, type = win32security.LookupAccountName("", "Administrators")
-            owner_sid = owner_info.GetSecurityDescriptorOwner()
+class Handler(FileSystemEventHandler):
 
-            # open(directory+dlp_file['filename'][row], "r").close()
-            show_cacls(directory + dlp_file['filename'][row])
+    ##Untuk sekarang cuma kalo file di buat, di modify, atau di move baru watchernya logging. Gunanya watcher untuk kalo ada file baru atau yg di edit bakal di extract textnya buat di cek confidential atau enggak
+    @staticmethod
+    def on_any_event(event):
+        new_file = []
+        if event.is_directory:
+            return None
 
-            # set permission
-            dacl = win32security.ACL()
-            # dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
-            # dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,
-            #                          owner_sid)
-            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, everyone)
+        elif event.event_type == 'created':
+            # Take any action here when a file is first created.
+            print ("Received created event - %s." % event.src_path)
+            new_file.append(event.src_path.split('/')[-1:])
+            changelog = open('clog.txt','a')
+            changelog.write('created, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+            changelog.close()
 
-            # EXECUTE ORDER 66!!!
-            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
-            win32security.SetFileSecurity(directory + dlp_file['filename'][row],
-                                          win32security.DACL_SECURITY_INFORMATION, access_info)
-            show_cacls(directory + dlp_file['filename'][row])
+        elif event.event_type == 'modified':
+            # Taken any action here when a file is modified.
+            print ("Received modified event - %s." % event.src_path)
+            new_file.append(event.src_path.split('/')[-1:])
+            changelog = open('clog.txt', 'a')
+            changelog.write('modified, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+            changelog.close()
 
-def show_cacls(filename):
-    for line in os.popen("cacls %s" % filename).read().splitlines():
-        print(line)
+        elif event.event_type == 'moved':
+            # Taken any action here when a file is moved.
+            print ("Received moved event - %s." % event.src_path)
+            new_file.append(event.src_path.split('/')[-1:])
+            changelog = open('clog.txt', 'a')
+            changelog.write('moved, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+            changelog.close()
+
+        # elif event.event_type == 'deleted':
+        #     # Taken any action here when a file is deleted.
+        #     print ("Received deleted event - %s." % event.src_path)
+        #     new_file.append(event.src_path.split('/')[-1:])
+        #     changelog = open('clog.txt', 'a')
+        #     changelog.write('deleted, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+        #     changelog.close()
+
+def dir_watch(dir_to_watch='fix/'):
+    w = Watcher()
+    w.watch_dir(dir_to_watch)
+    w.run()
 
 if __name__ == '__main__':
 
@@ -266,13 +267,23 @@ if __name__ == '__main__':
     ##TODO cek dari config.ini, atau settings.ini
     ##TODO cek ada h5 ga
     ps.read('testong.ini')
-    h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
-    h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
-    tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
-    files = ps.get('folder_protect', 'folder') #TODO list dir dari inputan user
+    h5_file = ''
+    h5json_file = ''
+    tokenizer_file = ''
+    files = ''
+    try:
+        h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
+        h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
+        tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
+    except:
+        pass
+    try:
+        files = ps.get('folder_protect', 'folder') #TODO list dir dari inputan user
+    except:
+        pass
     list = [file for file in files if ".pdf" in file] #Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
-    if h5_file == '' or h5json_file == '' or tokenizer_file == '':
-        print("No H5 / Tokenizer model found, training our ML system according to your file")
+    if h5_file == '' or h5json_file == '':
+        print("No H5 model found, training our ML system according to your file")
         make_dataset(list)
         trainer()
         h5_file='model.h5'
@@ -299,8 +310,7 @@ if __name__ == '__main__':
             make_dataset(list)
             print('list making complete, going into checking session')
             checker()
-            acl()
-            time.sleep(60)
+            time.sleep(5)
 
     except ValueError as e:
         print(e)
