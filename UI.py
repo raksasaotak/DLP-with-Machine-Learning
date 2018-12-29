@@ -1,39 +1,206 @@
+import configparser
+import sys
 import os
-import win32security
-import ntsecuritycon as con
 
-FILENAME = "D:/temp.txt"
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import (QApplication, QLabel, QPushButton, QWidget, QAction, QMainWindow, QFileDialog, QLineEdit)
+from win32api import GetSystemMetrics
+
+parser = configparser.ConfigParser()
+
+path = []
+folder = []
+pickle =[]
 
 
-#ALWAYS RUN THIS SCRIPT AS ADMIN OTHERWISE YOU CANT CHANGE OTHERS PERMISSION
+class Config():
+    def __init__(self):
+        self.conf_file = "testong.ini"
+        self.found = parser.read(self.conf_file)
+        try:
+            parser.get('machine_learning', 'h5')
+            parser.get('machine_learning', 'weight')
+            parser.get('folder_protect', 'folder')
+        except:
+            print("one of them is empty")
+        self.rw_config()
 
-#show accesss control list, from a file
-def show_cacls (filename):
-    print
-    print
-    for line in os.popen ("cacls %s" % filename).read ().splitlines ():
-        print(line)
+    def rw_config(self):
+        if not self.found:
+            parser.add_section('machine_learning')
+            parser.add_section('folder_protect')
+            parser.add_section('pickle_file')
+            try:
+                parser.set('machine_learning', 'h5', path[0])
+                parser.set('machine_learning', 'weight', path[1])
+            except:
+                pass
+            try:
+                parser.set('folder_protect', 'folder', folder[0])
+            except:
+                pass
+            try:
+                parser.set('pickle_file', 'pickle', pickle[0])
+            except:
+                pass
 
-#fucntion to get and set ACL
-access_info = win32security.GetFileSecurity(FILENAME, win32security.DACL_SECURITY_INFORMATION)
-#funtion to get owner info of a file
-owner_info = win32security.GetFileSecurity (FILENAME, win32security.OWNER_SECURITY_INFORMATION)
+            with open(self.conf_file, 'w') as configfile:
+                parser.write(configfile)
+        else:
+            try:
+                parser.set('folder_protect', 'folder', folder[0])
+                parser.set('machine_learning', 'h5', path[0])
+                parser.set('machine_learning', 'weight', path[1])
+                parser.set('pickle_file', 'pickle', pickle[0])
+            except:
+                pass
 
-#lookup for SID of user
-everyone, domain, type = win32security.LookupAccountName ("", "Everyone")
-admins, domain, type = win32security.LookupAccountName ("", "Administrators")
-owner_sid = owner_info.GetSecurityDescriptorOwner ()
+            with open(self.conf_file, 'w') as configfile:
+                parser.write(configfile)
 
-open(FILENAME, "r").close()
-show_cacls(FILENAME)
 
-#set permission
-dacl = win32security.ACL ()
-dacl.AddAccessDeniedAce (win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
-dacl.AddAccessAllowedAce (win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE, owner_sid)
-dacl.AddAccessAllowedAce (win32security.ACL_REVISION, con.FILE_ALL_ACCESS, admins)
 
-#EXECUTE ORDER 66!!!
-access_info.SetSecurityDescriptorDacl (1, dacl, 0)
-win32security.SetFileSecurity (FILENAME, win32security.DACL_SECURITY_INFORMATION, access_info)
-show_cacls (FILENAME)
+
+class App(QMainWindow, QWidget):
+
+    def __init__(self):
+        super().__init__()
+        Left = GetSystemMetrics(0)
+        Top = GetSystemMetrics(1)
+        Width = 500
+        Height = 300
+        self.title = 'MyDLPy'
+        self.left = (Left / 2) - (Width / 2)
+        self.top = (Top / 2) - (Height / 2)
+        self.width = Width
+        self.height = Height
+        self.initUI()
+
+    def initUI(self):
+        self.setWindowTitle(self.title)
+        self.setWindowIcon(QIcon('asdas.png'))
+        self.setGeometry(self.left, self.top, self.width, self.height)
+
+        mainMenu = self.menuBar()
+        fileMenu = mainMenu.addMenu('File')
+        editMenu = mainMenu.addMenu('Edit')
+        helpMenu = mainMenu.addMenu('Help')
+
+        exitButton = QAction(QIcon('asdas.png'), 'Exit', self)
+        exitButton.setShortcut('Ctrl+Q')
+        exitButton.setStatusTip('Exit application')
+        exitButton.triggered.connect(self.close)
+        fileMenu.addAction(exitButton)
+
+        importH5 = QAction('Import model File', self)
+        importH5.setShortcut('Ctrl+O')
+        importH5.setStatusTip('Import your H5')
+        importH5.triggered.connect(self.openFileNameDialog)
+        fileMenu.addAction(importH5)
+
+        editAcess = QAction('Edit File Access', self)
+        editAcess.setShortcut('Ctrl+E')
+        editAcess.setStatusTip('edit your file access')
+        editAcess.triggered.connect(self.run_Csv)
+        editMenu.addAction(editAcess)
+
+        openFolder = QAction('Import protected folder', self)
+        openFolder.setShortcut('Ctrl+F')
+        openFolder.setStatusTip('Import your Folder')
+        openFolder.triggered.connect(self.openFolderDialog)
+        fileMenu.addAction(openFolder)
+
+        self.h5Label = QLabel(self)
+        self.h5Label.setText('H5:')
+        self.weightLabel = QLabel(self)
+        self.weightLabel.setText('Weight: ')
+        self.folderLabel = QLabel(self)
+        self.folderLabel.setText('Folder: ')
+        self.pickleLabel = QLabel(self)
+        self.pickleLabel.setText('Pickle: ')
+        self.h5line = QLineEdit(self)
+        self.weightLine = QLineEdit(self)
+        self.folderLine = QLineEdit(self)
+        self.pickleLine = QLineEdit(self)
+
+        self.h5line.move(80, 20)
+        self.h5line.resize(400, 32)
+        self.weightLine.move(80, 60)
+        self.weightLine.resize(400, 32)
+        self.folderLine.move(80, 100)
+        self.folderLine.resize(400, 32)
+        self.pickleLine.move(80,140)
+        self.pickleLine.resize(400,32)
+        self.h5Label.move(20, 20)
+        self.weightLabel.move(20, 60)
+        self.folderLabel.move(20, 100)
+        self.pickleLabel.move(20,140)
+
+
+        button = QPushButton('Validate!', self)
+        button.setToolTip('Validate the H5 and Weight model')
+        button.move(200, 180)
+        button.clicked.connect(Config)
+        button.clicked.connect(self.on_click)
+
+        button = QPushButton('Start!', self)
+        button.setToolTip('Start your service')
+        button.move(200, 220)
+        button.clicked.connect(Config)
+        button.clicked.connect(self.run_Service)
+
+        self.show()
+
+    @pyqtSlot()
+    def run_Service(self):
+        os.system('python watcher.py')
+        os.system('python Predictor.py')
+    def run_Csv(self):
+        os.system('python runCsv.py')
+
+    def on_click(self):
+        parser.read('testong.ini')
+        try:
+            self.h5line.setText(parser.get('machine_learning', 'h5'))
+            self.weightLine.setText(parser.get('machine_learning', 'weight'))
+            self.pickleLine.setText(parser.get('pickle_file', 'pickle'))
+        except:
+            pass
+        try:
+            self.folderLine.setText(parser.get('folder_protect', 'folder'))
+        except:
+            pass
+
+    def openFolderDialog(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        folderName = QFileDialog.getExistingDirectory(self, "Select your folder",".",
+                                                      options=options)
+        folder.insert(0, folderName)
+        print(folder[0])
+
+    def openFileNameDialog(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fileName, _ = QFileDialog.getOpenFileName(self, "Select your model", "",
+                                                  "All Files (*);;h5 Files (*.h5);;json Files (*.json);; pickle Files(*.pickle)",
+                                                  options=options)
+        print(fileName)
+        if ".h5" in fileName:
+            path.insert(0, fileName)
+            print(path[0])
+        elif ".json" in fileName:
+            path.insert(1, fileName)
+            print(path[1])
+        elif ".pickle" in fileName:
+            pickle.insert(0, fileName)
+            print(pickle[0])
+        else:
+            print("unrecognizeable")
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = App()
+    sys.exit(app.exec_())
