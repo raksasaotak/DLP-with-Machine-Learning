@@ -41,7 +41,7 @@ def preprocess_text(text):
 
 def make_dataset(list_of_file):
     ##Ngebuat dataset dari csv
-    raw_data = {'documents': [], 'file_name': [], 'tags': []}
+    raw_data = {'documents': [], 'filename': [], 'tags': []}
     i = 0
     if "tags" in list_of_file:
         for file in list_of_file['filename']:
@@ -52,7 +52,7 @@ def make_dataset(list_of_file):
                 for word in a:
                     b += word + ' '
                 raw_data['documents'].append(b)
-                raw_data['file_name'].append(file)
+                raw_data['filename'].append(file)
                 raw_data['tags'].append(list_of_file['tags'][i])
                 i += 1
             except ValueError as e:
