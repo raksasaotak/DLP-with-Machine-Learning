@@ -6,8 +6,8 @@ import time
 parser = configparser.ConfigParser()
 
 class Watcher:
-    ##TODO directorynya dari inputan user
-    DIRECTORY_TO_WATCH = ''
+    parser.read('testong.ini')
+    DIRECTORY_TO_WATCH = parser.get('folder_protect', 'folder')
 
     def __init__(self):
         self.observer = Observer()
