@@ -198,20 +198,21 @@ def trainer(dict_csv='test.csv'):
     df.to_csv('dlp.csv', encoding="utf-8")
 
     print('Saved CSV model')
-    # loaded_model = model_from_json(loaded_model_json)
+    json_file = open('model.json', 'r')
+    loaded_json_model = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_json_model)
 
-    # loaded_model.load_weights("model.h5")
-    # print("Loaded model from disk")
-    #
-    # loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    # score = loaded_model.evaluate(x_test, y_test, verbose=1)
-    # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
+    loaded_model.load_weights("model.h5")
+    print("Loaded model from disk")
+
+    loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    score = loaded_model.evaluate(x_test, y_test, verbose=1)
+    print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 if __name__ == '__main__':
 
     changes = []
-    ##TODO cek dari config.ini, atau settings.ini
-    ##TODO cek ada h5 ga
     h5_file = ''
     h5json_file = ''
     tokenizer_file = ''
@@ -225,25 +226,22 @@ if __name__ == '__main__':
     except:
         pass
 
-    try:
-        files = ps.get('folder_protect', 'folder') #TODO list dir dari inputan user
-        if os.path.isdir(files+'/confidential'):
-            temp1 = os.listdir(files+'/confidential')
-            list = [file for file in temp1 if ".pdf" in file]  # Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
-            for file in list:
-                list_files['tags'].append('confidential')
-            list_files['filename'].extend(list)
-        elif os.path.isdir(files+'/public'):
-            temp1 = os.listdir(files+'/public')
-            list = [file for file in temp1 if ".pdf" in file]  # Buat daftar file apa aja yang ada di dalam sebuah directory yang filetypenya pdf
-            for file in list:
-                list_files['tags'].append('public')
-            list_files['filename'].extend(list)
-    except:
-        pass
-
-    if h5_file == '' or h5json_file == '':
+    if h5_file == '' or h5json_file == '' or tokenizer_file == '':
         print("No H5 model found, training our ML system according to your file")
+        try:
+            files = ps.get('folder_protect', 'folder')  # TODO list dir dari inputan user
+            if os.path.isdir(files + '/confidential'):
+                temp1 = os.listdir(files + '/confidential')
+                for file in temp1:
+                    list_files['tags'].append('confidential')
+                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+            elif os.path.isdir(files + '/public'):
+                temp1 = os.listdir(files + '/public')
+                for file in temp1:
+                    list_files['tags'].append('public')
+                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+        except:
+            pass
         make_dataset(list_files)
         trainer()
         h5_file='model.h5'
