@@ -81,7 +81,7 @@ def list_dupe_del(seq):
     return [x for x in seq if not (x in seen or seen_add(x))]
 
 ##TODO cek bug perbandingan h5 ke inputan
-def checker(csv_file='example_test.csv', json_model='model.json', h5_model='model.h5', tokenizer='tokenizer.pickle'):
+def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', tokenizer='tokenizer.pickle'):
     predicted_data = {'filename': [], 'tags': []}
     old_data = {'filename': [], 'tags': []}
 
@@ -209,6 +209,14 @@ def trainer(dict_csv='test.csv'):
     loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
     score = loaded_model.evaluate(x_test, y_test, verbose=1)
     print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
+
+def relearn(dict_csv='dlp.csv'):
+    lists = pd.read_csv(dict_csv)
+    new_dict = {'filename': [], 'tags': []}
+    new_dict['filename'].extend(lists['filename'])
+    new_dict['tags'].extend(lists['tags'])
+    make_dataset(new_dict)
+    trainer()
 
 if __name__ == '__main__':
 
