@@ -143,8 +143,8 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', t
 def trainer(dict_csv='test.csv'):
     data = pd.read_csv(dict_csv)
     train_size = int(len(data) * .7)
-    train_posts = data['documents'][:train_size]
-    train_tags = data['tags'][:train_size]
+    train_posts = data['documents']
+    train_tags = data['tags']
     test_posts = data['documents'][train_size:]
     test_tags = data['tags'][train_size:]
     posts = data['documents']
