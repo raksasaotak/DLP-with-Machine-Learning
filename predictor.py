@@ -45,18 +45,32 @@ def make_dataset(list_of_file):
     i = 0
     if "tags" in list_of_file:
         for file in list_of_file['filename']:
-            try:
-                a = extract_text(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file)
-                a = preprocess_text(a)
-                b = ''
-                for word in a:
-                    b += word + ' '
-                raw_data['documents'].append(b)
-                raw_data['filename'].append(file)
-                raw_data['tags'].append(list_of_file['tags'][i])
-                i += 1
-            except ValueError as e:
-                print(e)
+            if os.path.isfile(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file):
+                try:
+                    a = extract_text(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file)
+                    a = preprocess_text(a)
+                    b = ''
+                    for word in a:
+                        b += word + ' '
+                    raw_data['documents'].append(b)
+                    raw_data['filename'].append(file)
+                    raw_data['tags'].append(list_of_file['tags'][i])
+                    i += 1
+                except ValueError as e:
+                    print(e)
+            else:
+                try:
+                    a = extract_text(ps.get('folder_protect', 'folder') + '/' + file)
+                    a = preprocess_text(a)
+                    b = ''
+                    for word in a:
+                        b += word + ' '
+                    raw_data['documents'].append(b)
+                    raw_data['filename'].append(file)
+                    raw_data['tags'].append(list_of_file['tags'][i])
+                    i += 1
+                except ValueError as e:
+                    print(e)
         df = pd.DataFrame(raw_data, columns=['documents', 'tags', 'filename'])
     else:
         for file in list_of_file:
@@ -227,56 +241,56 @@ if __name__ == '__main__':
     list_files = {'filename': [], 'tags': []}
     files = ''
 
-    try:
-        h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
-        h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
-        tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
-    except:
-        pass
+    # try:
+    #     h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
+    #     h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
+    #     tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
+    # except:
+    #     pass
+    #
+    # if h5_file == '' or h5json_file == '' or tokenizer_file == '':
+    #     print("No H5 model found, training our ML system according to your file")
+    #     try:
+    #         files = ps.get('folder_protect', 'folder')  # TODO list dir dari inputan user
+    #         if os.path.isdir(files + '/confidential'):
+    #             temp1 = os.listdir(files + '/confidential')
+    #             for file in temp1:
+    #                 list_files['tags'].append('confidential')
+    #             list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+    #         if os.path.isdir(files + '/public'):
+    #             temp1 = os.listdir(files + '/public')
+    #             for file in temp1:
+    #                 list_files['tags'].append('public')
+    #             list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+    #     except:
+    #         pass
+    #     make_dataset(list_files)
+    #     trainer()
+    #     h5_file='model.h5'
+    #     h5json_file='model.json'
+    #     tokenizer_file='tokenizer.pickle'
+    relearn()
 
-    if h5_file == '' or h5json_file == '' or tokenizer_file == '':
-        print("No H5 model found, training our ML system according to your file")
-        try:
-            files = ps.get('folder_protect', 'folder')  # TODO list dir dari inputan user
-            if os.path.isdir(files + '/confidential'):
-                temp1 = os.listdir(files + '/confidential')
-                for file in temp1:
-                    list_files['tags'].append('confidential')
-                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-            if os.path.isdir(files + '/public'):
-                temp1 = os.listdir(files + '/public')
-                for file in temp1:
-                    list_files['tags'].append('public')
-                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-        except:
-            pass
-        make_dataset(list_files)
-        trainer()
-        h5_file='model.h5'
-        h5json_file='model.json'
-        tokenizer_file='tokenizer.pickle'
-
-    try:
-        while True:
-            list = []
-            #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-            clog = open('clog.txt','r')
-            for line in clog:
-                line = line.split(', ')
-                line = ''.join(line[-1:])
-                line = line.replace('\n','')
-                changes.append(line)
-            changes = list_dupe_del(changes)
-            clog.close()
-            #biar clog.txt-nya bersih
-            # clog = open('clog.txt','w')
-            # clog.close()
-
-            list.extend(file for file in changes if ".pdf" in file)
-            make_dataset(list)
-            print('list making complete, going into checking session')
-            checker()
-            time.sleep(600)
-
-    except ValueError as e:
-        print(e)
+    # try:
+    #     while True:
+    #         list = []
+    #         #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
+    #         clog = open('clog.txt','r')
+    #         for line in clog:
+    #             line = line.split(', ')
+    #             line = ''.join(line[-1:]).strip()
+    #             changes.append(line)
+    #         changes = list_dupe_del(changes)
+    #         clog.close()
+    #         #biar clog.txt-nya bersih
+    #         # clog = open('clog.txt','w')
+    #         # clog.close()
+    #
+    #         list.extend(file for file in changes if ".pdf" in file)
+    #         make_dataset(list)
+    #         print('list making complete, going into checking session')
+    #         checker()
+    #         time.sleep(600)
+    #
+    # except ValueError as e:
+    #     print(e)
