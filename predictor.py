@@ -67,7 +67,7 @@ def make_dataset(list_of_file):
                 for word in a:
                     b += word + ' '
                 raw_data['documents'].append(b)
-                raw_data['file_name'].append(file)
+                raw_data['filename'].append(file)
             except ValueError as e:
                 print(e)
         df = pd.DataFrame(raw_data, columns=['documents', 'filename'])
@@ -243,7 +243,7 @@ if __name__ == '__main__':
                 for file in temp1:
                     list_files['tags'].append('confidential')
                 list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-            elif os.path.isdir(files + '/public'):
+            if os.path.isdir(files + '/public'):
                 temp1 = os.listdir(files + '/public')
                 for file in temp1:
                     list_files['tags'].append('public')
@@ -256,27 +256,27 @@ if __name__ == '__main__':
         h5json_file='model.json'
         tokenizer_file='tokenizer.pickle'
 
-    # try:
-    #     while True:
-    #         list = []
-    #         #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-    #         clog = open('clog.txt','r')
-    #         for line in clog:
-    #             line = line.split(', ')
-    #             line = ''.join(line[-1:])
-    #             line = line.replace('\n','')
-    #             changes.append(line)
-    #         changes = list_dupe_del(changes)
-    #         clog.close()
-    #         #biar clog.txt-nya bersih
-    #         # clog = open('clog.txt','w')
-    #         # clog.close()
-    #
-    #         list.extend(file for file in changes if ".pdf" in file)
-    #         make_dataset(list)
-    #         print('list making complete, going into checking session')
-    #         checker()
-    #         time.sleep(5)
-    #
-    # except ValueError as e:
-    #     print(e)
+    try:
+        while True:
+            list = []
+            #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
+            clog = open('clog.txt','r')
+            for line in clog:
+                line = line.split(', ')
+                line = ''.join(line[-1:])
+                line = line.replace('\n','')
+                changes.append(line)
+            changes = list_dupe_del(changes)
+            clog.close()
+            #biar clog.txt-nya bersih
+            # clog = open('clog.txt','w')
+            # clog.close()
+
+            list.extend(file for file in changes if ".pdf" in file)
+            make_dataset(list)
+            print('list making complete, going into checking session')
+            checker()
+            time.sleep(600)
+
+    except ValueError as e:
+        print(e)
