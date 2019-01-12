@@ -291,11 +291,11 @@ if __name__ == '__main__':
                 # clog = open('clog.txt','w')
                 # clog.close()
 
-                list.extend(file for file in changes if ".pdf" in file)
-                make_dataset(list)
-                print('list making complete, going into checking session')
-                checker()
-                time.sleep(600)
+            list.extend(file for file in changes if ".pdf" in file)
+            make_dataset(list)
+            print('list making complete, going into checking session')
+            checker()
+            time.sleep(600)
 
-        except ValueError as e:
-            print(e)
+    except ValueError as e:
+        print(e)
