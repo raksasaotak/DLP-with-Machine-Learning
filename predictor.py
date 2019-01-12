@@ -17,6 +17,21 @@ ps.read('testong.ini')
 
 ##TODO Dokumentasi Codingan, buat variabel rapi
 
+def is_first_run():
+    h5_file = ''
+    h5json_file = ''
+    tokenizer_file = ''
+    try:
+        h5_file = ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
+        h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
+        tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
+    except:
+        pass
+    if h5_file == '' or h5json_file == '' or tokenizer_file == '':
+        return True
+    elif h5_file != '' and h5json_file != '' and tokenizer_file != '':
+        return False
+
 def extract_text(file_path):
     ##Buat ngambil text dari document, inputnya dari file path
     text = parser.from_file(file_path)
@@ -235,62 +250,52 @@ def relearn(dict_csv='dlp.csv'):
 if __name__ == '__main__':
 
     changes = []
-    h5_file = ''
-    h5json_file = ''
-    tokenizer_file = ''
     list_files = {'filename': [], 'tags': []}
     files = ''
 
-    # try:
-    #     h5_file =ps.get('machine_learning', 'h5')#Kalo ada file h5 masukin kesini
-    #     h5json_file = ps.get('machine_learning', 'weight')#Kalo ada file h5 json masukin kesini
-    #     tokenizer_file = ps.get('pickle_file', 'pickle')#Kalo ada file tokenizer dalam bentuk .pickle masukin kesini
-    # except:
-    #     pass
-    #
-    # if h5_file == '' or h5json_file == '' or tokenizer_file == '':
-    #     print("No H5 model found, training our ML system according to your file")
-    #     try:
-    #         files = ps.get('folder_protect', 'folder')  # TODO list dir dari inputan user
-    #         if os.path.isdir(files + '/confidential'):
-    #             temp1 = os.listdir(files + '/confidential')
-    #             for file in temp1:
-    #                 list_files['tags'].append('confidential')
-    #             list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-    #         if os.path.isdir(files + '/public'):
-    #             temp1 = os.listdir(files + '/public')
-    #             for file in temp1:
-    #                 list_files['tags'].append('public')
-    #             list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-    #     except:
-    #         pass
-    #     make_dataset(list_files)
-    #     trainer()
-    #     h5_file='model.h5'
-    #     h5json_file='model.json'
-    #     tokenizer_file='tokenizer.pickle'
-    relearn()
+    if is_first_run():
+        print("No H5 model found, training our ML system according to your file")
+        try:
+            files = ps.get('folder_protect', 'folder')  # TODO list dir dari inputan user
+            if os.path.isdir(files + '/confidential'):
+                temp1 = os.listdir(files + '/confidential')
+                for file in temp1:
+                    list_files['tags'].append('confidential')
+                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+            if os.path.isdir(files + '/public'):
+                temp1 = os.listdir(files + '/public')
+                for file in temp1:
+                    list_files['tags'].append('public')
+                list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
+                make_dataset(list_files)
+                trainer()
+                h5_file = 'model.h5'
+                h5json_file = 'model.json'
+                tokenizer_file = 'tokenizer.pickle'
+        except:
+            pass
 
-    # try:
-    #     while True:
-    #         list = []
-    #         #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-    #         clog = open('clog.txt','r')
-    #         for line in clog:
-    #             line = line.split(', ')
-    #             line = ''.join(line[-1:]).strip()
-    #             changes.append(line)
-    #         changes = list_dupe_del(changes)
-    #         clog.close()
-    #         #biar clog.txt-nya bersih
-    #         # clog = open('clog.txt','w')
-    #         # clog.close()
-    #
-    #         list.extend(file for file in changes if ".pdf" in file)
-    #         make_dataset(list)
-    #         print('list making complete, going into checking session')
-    #         checker()
-    #         time.sleep(600)
-    #
-    # except ValueError as e:
-    #     print(e)
+    else:
+        try:
+            while True:
+                list = []
+                #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
+                clog = open('clog.txt','r')
+                for line in clog:
+                    line = line.split(', ')
+                    line = ''.join(line[-1:]).strip()
+                    changes.append(line)
+                changes = list_dupe_del(changes)
+                clog.close()
+                #biar clog.txt-nya bersih
+                # clog = open('clog.txt','w')
+                # clog.close()
+
+                list.extend(file for file in changes if ".pdf" in file)
+                make_dataset(list)
+                print('list making complete, going into checking session')
+                checker()
+                time.sleep(600)
+
+        except ValueError as e:
+            print(e)
