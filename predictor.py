@@ -1,5 +1,5 @@
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import *
 from keras_preprocessing import text
 from keras.models import model_from_json
 import numpy as np
@@ -187,17 +187,23 @@ def trainer(dict_csv='test.csv'):
     model = Sequential()
 
     ##Buat hidden layer, gunanya buat naikin akurasi
-    model.add(Dense(256, input_shape=(vocab_size,)))
+    model.add(Dense(512, input_shape=(vocab_size,)))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dense(512))
+    model.add(Dense(128))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(Dense(256))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dense(64))
+    model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(Dense(num_labels))
-    model.add(Activation('softmax'))
+    model.add(Dense(1))
+    model.add(Activation('sigmoid'))
 
-    model.compile(loss='sparse_categorical_crossentropy',
+    model.compile(loss='binary_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
 
