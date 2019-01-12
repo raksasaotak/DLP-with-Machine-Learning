@@ -122,7 +122,7 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', t
         pass
 
     data = pd.read_csv(csv_file)
-    dictionary = pd.read_csv('example_test.csv', encoding='utf-8')
+    dictionary = pd.read_csv('dlp.csv', encoding='utf-8')
     json_file = open(json_model, 'r')
     loaded_json_model = json_file.read()
     json_file.close()
@@ -227,17 +227,17 @@ def trainer(dict_csv='test.csv'):
     df.to_csv('dlp.csv', encoding="utf-8")
 
     print('Saved CSV model')
-    # json_file = open('model.json', 'r')
-    # loaded_json_model = json_file.read()
-    # json_file.close()
-    # loaded_model = model_from_json(loaded_json_model)
-    #
-    # loaded_model.load_weights("model.h5")
-    # print("Loaded model from disk")
-    #
-    # loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    # score = loaded_model.evaluate(x_test, y_test, verbose=1)
-    # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
+    json_file = open('model.json', 'r')
+    loaded_json_model = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_json_model)
+
+    loaded_model.load_weights("model.h5")
+    print("Loaded model from disk")
+
+    loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    score = loaded_model.evaluate(x_test, y_test, verbose=1)
+    print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 def relearn(dict_csv='dlp.csv'):
     lists = pd.read_csv(dict_csv)
@@ -253,6 +253,7 @@ if __name__ == '__main__':
     list_files = {'filename': [], 'tags': []}
     files = ''
 
+    ##Training
     if is_first_run():
         print("No H5 model found, training our ML system according to your file")
         try:
@@ -275,21 +276,20 @@ if __name__ == '__main__':
         except:
             pass
 
-    else:
-        try:
-            while True:
-                list = []
-                #TODO kalo dapet file baru dari watcher, dilempar kesini. Sekarang diakalin pake time sleep, timesleep watcher = 1, timesleep dlp 5
-                clog = open('clog.txt','r')
-                for line in clog:
-                    line = line.split(', ')
-                    line = ''.join(line[-1:]).strip()
-                    changes.append(line)
-                changes = list_dupe_del(changes)
-                clog.close()
-                #biar clog.txt-nya bersih
-                # clog = open('clog.txt','w')
-                # clog.close()
+    ##Checking
+    try:
+        while True:
+            list = []
+            clog = open('clog.txt','r')
+            for line in clog:
+                line = line.split(', ')
+                line = ''.join(line[-1:]).strip()
+                changes.append(line)
+            changes = list_dupe_del(changes)
+            clog.close()
+            #biar clog.txt-nya bersih
+            # clog = open('clog.txt','w')
+            # clog.close()
 
             list.extend(file for file in changes if ".pdf" in file)
             make_dataset(list)
