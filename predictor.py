@@ -227,17 +227,17 @@ def trainer(dict_csv='test.csv'):
     df.to_csv('dlp.csv', encoding="utf-8")
 
     print('Saved CSV model')
-    json_file = open('model.json', 'r')
-    loaded_json_model = json_file.read()
-    json_file.close()
-    loaded_model = model_from_json(loaded_json_model)
-
-    loaded_model.load_weights("model.h5")
-    print("Loaded model from disk")
-
-    loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-    score = loaded_model.evaluate(x_test, y_test, verbose=1)
-    print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
+    # json_file = open('model.json', 'r')
+    # loaded_json_model = json_file.read()
+    # json_file.close()
+    # loaded_model = model_from_json(loaded_json_model)
+    #
+    # loaded_model.load_weights("model.h5")
+    # print("Loaded model from disk")
+    #
+    # loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    # score = loaded_model.evaluate(x_test, y_test, verbose=1)
+    # print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 def relearn(dict_csv='dlp.csv'):
     lists = pd.read_csv(dict_csv)

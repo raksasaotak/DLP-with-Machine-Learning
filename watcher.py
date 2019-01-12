@@ -7,7 +7,7 @@ parser = configparser.ConfigParser()
 
 class Watcher:
     parser.read('testong.ini')
-    DIRECTORY_TO_WATCH = parser.get('folder_protect', 'folder')
+    DIRECTORY_TO_WATCH = parser.get('folder_protect', 'folder') + '/'
 
     def __init__(self):
         self.observer = Observer()
