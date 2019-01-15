@@ -1,40 +1,17 @@
 import configparser
 import sys
 import os
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from win32api import GetSystemMetrics
-import time
-import predictor
 
 parser = configparser.ConfigParser()
 
 path = []
 folder = []
 pickle =[]
-
-# class Stream(QtCore.QObject):
-#     """Redirects console output to text widget."""
-#     newText = QtCore.pyqtSignal(str)
-#
-#     def write(self, text):
-#         self.newText.emit(str(text))
-#
-# class Debugger(QTextBrowser):
-#     def __init__(self, parent):
-#         super(Debugger, self).__init__(parent)
-#         sys.stdout = self
-#
-#     def write(self, text):
-#         self.moveCursor(QTextCursor.End)
-#         self.textCursor().insertText(text)
-#
-# class MyStream(object):
-#     def write(self, text):
-#         self.moveCursor(QTextCursor.End)
-#         self.textCursor().insertText(text)
 
 class Config():
     def __init__(self):
@@ -81,21 +58,6 @@ class Config():
             with open(self.conf_file, 'w') as configfile:
                 parser.write(configfile)
 
-class embterminal(QWidget):
-
-    def __init__(self):
-        QWidget.__init__(self)
-        self.process = QProcess(self)
-        self.terminal = QWidget(self)
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.terminal)
-
-        # Works also with urxvt:
-        self.process.start(
-                'urxvt',['-embed', str(int(self.winId()))])
-        print(self.winId())
-        self.setGeometry(1, 1, 800, 600)
-
 class App(QMainWindow, QWidget):
 
     def __init__(self):
@@ -110,7 +72,7 @@ class App(QMainWindow, QWidget):
         self.width = Width
         self.height = Height
         self.initUI()
-        # self.new_window = new_window()
+        self.gui = gui()
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -191,10 +153,10 @@ class App(QMainWindow, QWidget):
         # os.system('python Predictor.py')
         # os.system('python watcher.py')
         # os.system('python test.py')
-        self.new_window.show()
+        self.gui.show()
 
     def run_Csv(self):
-        os.system('python runCsv.py')
+        os.system('python runCsv.py acl.csv')
 
     def on_click(self):
         parser.read('testong.ini')
@@ -236,57 +198,46 @@ class App(QMainWindow, QWidget):
         else:
             print("unrecognizeable")
 
-class new_window(QMainWindow, QWidget):
-    """Main application window."""
-
+class gui(QtWidgets.QMainWindow):
     def __init__(self):
-        super(new_window, self).__init__()
-
+        super(gui, self).__init__()
         self.initUI()
 
-        # Custom output stream.
-        sys.stdout = Stream(newText=self.onUpdateText)
+    def dataReady(self):
+        cursor = self.output.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.insertText(str(self.process.readAll(), 'utf-8'))
+        self.output.ensureCursorVisible()
 
-    def onUpdateText(self, text):
-        """Write console output to text widget."""
-        cursor = self.process.textCursor()
-        cursor.movePosition(QtGui.QTextCursor.End)
-        cursor.insertText(text)
-        self.process.setTextCursor(cursor)
-        self.process.ensureCursorVisible()
-
-    def closeEvent(self, event):
-        """Shuts down application on close."""
-        # Return stdout to defaults.
-        sys.stdout = sys.__stdout__
-        super().closeEvent(event)
+    def callProgram(self):
+        # run the process
+        # `start` takes the exec and a list of arguments
+        self.process.start('python',['predictor.py'])
 
     def initUI(self):
-        """Creates UI window on launch."""
-        # Button for generating the master list.
-        btnGenMast = QPushButton('Run', self)
-        btnGenMast.move(450, 100)
-        btnGenMast.resize(100, 100)
-        btnGenMast.clicked.connect(self.genMastClicked)
+        # Layout are better for placing widgets
+        layout = QtWidgets.QHBoxLayout()
+        self.runButton = QtWidgets.QPushButton('Run')
+        self.runButton.clicked.connect(self.callProgram)
 
-        # Create the text output widget.
-        self.process = QTextEdit(self, readOnly=True)
-        self.process.ensureCursorVisible()
-        self.process.setLineWrapColumnOrWidth(500)
-        self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
-        self.process.setFixedWidth(400)
-        self.process.setFixedHeight(150)
-        self.process.move(30, 100)
+        self.output = QtWidgets.QTextEdit()
 
-        # Set window size and title, then show the window.
-        self.setGeometry(300, 300, 600, 300)
-        self.setWindowTitle('Generate Master')
+        layout.addWidget(self.output)
+        layout.addWidget(self.runButton)
 
-    def genMastClicked(self):
-        """Runs the main function."""
-        mains = embterminal()
-        mains.show()
+        centralWidget = QtWidgets.QWidget()
+        centralWidget.setLayout(layout)
+        self.setCentralWidget(centralWidget)
 
+        # QProcess object for external app
+        self.process = QtCore.QProcess(self)
+        # QProcess emits `readyRead` when there is data to be read
+        self.process.readyRead.connect(self.dataReady)
+
+        # Just to prevent accidentally running multiple times
+        # Disable the button when process starts, and enable it when it finishes
+        self.process.started.connect(lambda: self.runButton.setEnabled(False))
+        self.process.finished.connect(lambda: self.runButton.setEnabled(True))
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

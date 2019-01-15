@@ -93,7 +93,7 @@ class MyWindow(QMainWindow):
         self.settings = QSettings('Axel Schneider', 'CSVEditor')
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.isChanged = False
-        self.fileName = ""
+        self.fileName = "acl.csv"
         self.fname = "Liste"
         self.mytext = ""
         self.colored = False

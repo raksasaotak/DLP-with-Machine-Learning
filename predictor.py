@@ -360,8 +360,8 @@ def run_all():
                 changes.append(line)
             changes = list_dupe_del(changes)
             # biar clog.txt-nya bersih
-            # clog = open('clog.txt','w')
-            # clog.close()
+            clog = open('clog.txt','w')
+            clog.close()
 
             list.extend(file for file in changes if ".pdf" in file)
             make_dataset(list)
