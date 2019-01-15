@@ -13,7 +13,7 @@ class Watcher:
         self.observer = Observer()
 
     def watch_dir(self, what_dir):
-        self.DIRECTORY_TO_WATCH = what_dir
+        self.DIRECTORY_TO_WATCH = what_dir + '/'
 
     def run(self):
         event_handler = Handler()
@@ -45,13 +45,13 @@ class Handler(FileSystemEventHandler):
             changelog.write('created, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
             changelog.close()
 
-        elif event.event_type == 'modified':
-            # Taken any action here when a file is modified.
-            print ("Received modified event - %s." % event.src_path)
-            new_file.append(event.src_path.split('/')[-1:])
-            changelog = open('clog.txt', 'a')
-            changelog.write('modified, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
-            changelog.close()
+        # elif event.event_type == 'modified':
+        #     # Taken any action here when a file is modified.
+        #     print ("Received modified event - %s." % event.src_path)
+        #     new_file.append(event.src_path.split('/')[-1:])
+        #     changelog = open('clog.txt', 'a')
+        #     changelog.write('modified, ' + ''.join(event.src_path.split('/')[-1:]) + '\n')
+        #     changelog.close()
 
         elif event.event_type == 'moved':
             # Taken any action here when a file is moved.

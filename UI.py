@@ -59,9 +59,6 @@ class Config():
             with open(self.conf_file, 'w') as configfile:
                 parser.write(configfile)
 
-
-
-
 class App(QMainWindow, QWidget):
 
     def __init__(self):
@@ -154,8 +151,8 @@ class App(QMainWindow, QWidget):
 
     @pyqtSlot()
     def run_Service(self):
-        os.system('python watcher.py')
         os.system('python Predictor.py')
+        os.system('python watcher.py')
     def run_Csv(self):
         os.system('python runCsv.py')
 

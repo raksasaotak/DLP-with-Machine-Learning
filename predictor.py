@@ -11,9 +11,25 @@ from tika import parser
 import keras
 import pickle
 import configparser
+import csv
+import sys
 
 ps = configparser.ConfigParser()
 ps.read('testong.ini')
+
+maxInt = sys.maxsize
+decrement = True
+
+while decrement:
+    # decrease the maxInt value by factor 10
+    # as long as the OverflowError occurs.
+
+    decrement = False
+    try:
+        csv.field_size_limit(maxInt)
+    except OverflowError:
+        maxInt = int(maxInt/10)
+        decrement = True
 
 ##TODO Dokumentasi Codingan, buat variabel rapi
 
@@ -51,7 +67,7 @@ def preprocess_text(text):
             line = line.split(" ")
             texts.extend(line)
 
-    texts[:] = [item for item in texts if item != '']
+    texts[:] = [item for item in texts if item is not '' and item is not ' ' and item is not None]
     return texts
 
 def make_dataset(list_of_file):
@@ -62,6 +78,7 @@ def make_dataset(list_of_file):
         for file in list_of_file['filename']:
             if os.path.isfile(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file):
                 try:
+                    print(file)
                     a = extract_text(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file)
                     a = preprocess_text(a)
                     b = ''
@@ -115,14 +132,14 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', t
     old_data = {'filename': [], 'tags': []}
 
     try:
-        dlp_file = pd.read_csv('dlp.csv', encoding='utf-8')
+        dlp_file = pd.read_csv('dlp.csv', encoding='utf-8', engine='python')
         old_data['filename'].extend(dlp_file['filename'])
         old_data['tags'].extend(dlp_file['tags'])
     except:
         pass
 
-    data = pd.read_csv(csv_file)
-    dictionary = pd.read_csv('dlp.csv', encoding='utf-8')
+    data = pd.read_csv(csv_file, engine='python')
+    dictionary = pd.read_csv('dlp.csv', encoding='utf-8', engine='python')
     json_file = open(json_model, 'r')
     loaded_json_model = json_file.read()
     json_file.close()
@@ -156,7 +173,7 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', t
 
 ##TODO buat trainer nya dulu kalo belom ada h5
 def trainer(dict_csv='test.csv'):
-    data = pd.read_csv(dict_csv)
+    data = pd.read_csv(dict_csv, engine='python')
     train_size = int(len(data) * .7)
     train_posts = data['documents']
     train_tags = data['tags']
@@ -193,17 +210,21 @@ def trainer(dict_csv='test.csv'):
     model.add(Dense(128))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(Dense(256))
+    model.add(Dense(512))
+    model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(Dense(128))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(Dense(64))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(Dense(1))
-    model.add(Activation('sigmoid'))
+    model.add(Dense(num_labels))
+    model.add(BatchNormalization())
+    model.add(Activation('softmax'))
 
-    model.compile(loss='binary_crossentropy',
+    model.compile(loss='sparse_categorical_crossentropy',
                   optimizer='adam',
                   metrics=['accuracy'])
 
@@ -246,7 +267,7 @@ def trainer(dict_csv='test.csv'):
     print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
 def relearn(dict_csv='dlp.csv'):
-    lists = pd.read_csv(dict_csv)
+    lists = pd.read_csv(dict_csv, engine='python')
     new_dict = {'filename': [], 'tags': []}
     new_dict['filename'].extend(lists['filename'])
     new_dict['tags'].extend(lists['tags'])
@@ -274,15 +295,15 @@ if __name__ == '__main__':
                 for file in temp1:
                     list_files['tags'].append('public')
                 list_files['filename'].extend(file for file in temp1 if ".pdf" in file)
-                make_dataset(list_files)
-                trainer()
-                h5_file = 'model.h5'
-                h5json_file = 'model.json'
-                tokenizer_file = 'tokenizer.pickle'
         except:
             pass
+        make_dataset(list_files)
+        trainer()
+        h5_file = 'model.h5'
+        h5json_file = 'model.json'
+        tokenizer_file = 'tokenizer.pickle'
 
-    ##Checking
+    #Checking
     try:
         while True:
             list = []
@@ -292,7 +313,6 @@ if __name__ == '__main__':
                 line = ''.join(line[-1:]).strip()
                 changes.append(line)
             changes = list_dupe_del(changes)
-            clog.close()
             #biar clog.txt-nya bersih
             # clog = open('clog.txt','w')
             # clog.close()
