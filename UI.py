@@ -1,11 +1,13 @@
 import configparser
 import sys
 import os
-
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (QApplication, QLabel, QPushButton, QWidget, QAction, QMainWindow, QFileDialog, QLineEdit)
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 from win32api import GetSystemMetrics
+import time
+import predictor
 
 parser = configparser.ConfigParser()
 
@@ -13,6 +15,26 @@ path = []
 folder = []
 pickle =[]
 
+# class Stream(QtCore.QObject):
+#     """Redirects console output to text widget."""
+#     newText = QtCore.pyqtSignal(str)
+#
+#     def write(self, text):
+#         self.newText.emit(str(text))
+#
+# class Debugger(QTextBrowser):
+#     def __init__(self, parent):
+#         super(Debugger, self).__init__(parent)
+#         sys.stdout = self
+#
+#     def write(self, text):
+#         self.moveCursor(QTextCursor.End)
+#         self.textCursor().insertText(text)
+#
+# class MyStream(object):
+#     def write(self, text):
+#         self.moveCursor(QTextCursor.End)
+#         self.textCursor().insertText(text)
 
 class Config():
     def __init__(self):
@@ -34,14 +56,11 @@ class Config():
             try:
                 parser.set('machine_learning', 'h5', path[0])
                 parser.set('machine_learning', 'weight', path[1])
+                parser.set('pickle_file', 'pickle', pickle[0])
             except:
                 pass
             try:
                 parser.set('folder_protect', 'folder', folder[0])
-            except:
-                pass
-            try:
-                parser.set('pickle_file', 'pickle', pickle[0])
             except:
                 pass
 
@@ -50,6 +69,9 @@ class Config():
         else:
             try:
                 parser.set('folder_protect', 'folder', folder[0])
+            except:
+                pass
+            try:
                 parser.set('machine_learning', 'h5', path[0])
                 parser.set('machine_learning', 'weight', path[1])
                 parser.set('pickle_file', 'pickle', pickle[0])
@@ -58,6 +80,21 @@ class Config():
 
             with open(self.conf_file, 'w') as configfile:
                 parser.write(configfile)
+
+class embterminal(QWidget):
+
+    def __init__(self):
+        QWidget.__init__(self)
+        self.process = QProcess(self)
+        self.terminal = QWidget(self)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.terminal)
+
+        # Works also with urxvt:
+        self.process.start(
+                'urxvt',['-embed', str(int(self.winId()))])
+        print(self.winId())
+        self.setGeometry(1, 1, 800, 600)
 
 class App(QMainWindow, QWidget):
 
@@ -73,6 +110,7 @@ class App(QMainWindow, QWidget):
         self.width = Width
         self.height = Height
         self.initUI()
+        # self.new_window = new_window()
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -144,15 +182,17 @@ class App(QMainWindow, QWidget):
         button = QPushButton('Start!', self)
         button.setToolTip('Start your service')
         button.move(200, 220)
-        button.clicked.connect(Config)
         button.clicked.connect(self.run_Service)
 
         self.show()
 
     @pyqtSlot()
     def run_Service(self):
-        os.system('python Predictor.py')
-        os.system('python watcher.py')
+        # os.system('python Predictor.py')
+        # os.system('python watcher.py')
+        # os.system('python test.py')
+        self.new_window.show()
+
     def run_Csv(self):
         os.system('python runCsv.py')
 
@@ -195,6 +235,57 @@ class App(QMainWindow, QWidget):
             print(pickle[0])
         else:
             print("unrecognizeable")
+
+class new_window(QMainWindow, QWidget):
+    """Main application window."""
+
+    def __init__(self):
+        super(new_window, self).__init__()
+
+        self.initUI()
+
+        # Custom output stream.
+        sys.stdout = Stream(newText=self.onUpdateText)
+
+    def onUpdateText(self, text):
+        """Write console output to text widget."""
+        cursor = self.process.textCursor()
+        cursor.movePosition(QtGui.QTextCursor.End)
+        cursor.insertText(text)
+        self.process.setTextCursor(cursor)
+        self.process.ensureCursorVisible()
+
+    def closeEvent(self, event):
+        """Shuts down application on close."""
+        # Return stdout to defaults.
+        sys.stdout = sys.__stdout__
+        super().closeEvent(event)
+
+    def initUI(self):
+        """Creates UI window on launch."""
+        # Button for generating the master list.
+        btnGenMast = QPushButton('Run', self)
+        btnGenMast.move(450, 100)
+        btnGenMast.resize(100, 100)
+        btnGenMast.clicked.connect(self.genMastClicked)
+
+        # Create the text output widget.
+        self.process = QTextEdit(self, readOnly=True)
+        self.process.ensureCursorVisible()
+        self.process.setLineWrapColumnOrWidth(500)
+        self.process.setLineWrapMode(QTextEdit.FixedPixelWidth)
+        self.process.setFixedWidth(400)
+        self.process.setFixedHeight(150)
+        self.process.move(30, 100)
+
+        # Set window size and title, then show the window.
+        self.setGeometry(300, 300, 600, 300)
+        self.setWindowTitle('Generate Master')
+
+    def genMastClicked(self):
+        """Runs the main function."""
+        mains = embterminal()
+        mains.show()
 
 
 if __name__ == '__main__':

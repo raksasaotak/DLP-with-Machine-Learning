@@ -13,6 +13,8 @@ import pickle
 import configparser
 import csv
 import sys
+import win32security
+import ntsecuritycon as con
 
 ps = configparser.ConfigParser()
 ps.read('testong.ini')
@@ -78,7 +80,6 @@ def make_dataset(list_of_file):
         for file in list_of_file['filename']:
             if os.path.isfile(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file):
                 try:
-                    print(file)
                     a = extract_text(ps.get('folder_protect', 'folder') + '/' + list_of_file['tags'][i] + '/' + file)
                     a = preprocess_text(a)
                     b = ''
@@ -170,6 +171,7 @@ def checker(csv_file='test.csv', json_model='model.json', h5_model='model.h5', t
     old_df = old_df.drop_duplicates()
     old_df = old_df.reset_index(drop=True)
     old_df.to_csv('dlp.csv', encoding="utf-8")
+    df.to_csv('acl.csv', encoding='utf-8')
 
 ##TODO buat trainer nya dulu kalo belom ada h5
 def trainer(dict_csv='test.csv'):
@@ -274,13 +276,57 @@ def relearn(dict_csv='dlp.csv'):
     make_dataset(new_dict)
     trainer()
 
-if __name__ == '__main__':
+def acl(dlp_file="acl.csv"):
+    dlp_file = pd.read_csv(dlp_file)
+    directory = ps.get('folder_protect', 'folder') + '/'
+    for row in range(0, len(dlp_file)):
+        if dlp_file['tags'][row] == 'confidential':
+            # function to get and set ACL
+            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],win32security.DACL_SECURITY_INFORMATION)
+            # function to get owner info of a file
+            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],win32security.OWNER_SECURITY_INFORMATION)
 
+            # lookup for SID of user
+            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
+            admins, domain, type = win32security.LookupAccountName("", "Administrators")
+            owner_sid = owner_info.GetSecurityDescriptorOwner()
+
+            # set permission
+            dacl = win32security.ACL()
+            dacl.AddAccessDeniedAce(win32security.ACL_REVISION, con.SECURITY_NULL_RID, everyone)
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_GENERIC_READ | con.FILE_GENERIC_WRITE,owner_sid)
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, admins)
+
+            # EXECUTE ORDER 66!!!
+            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
+            win32security.SetFileSecurity(directory + dlp_file['filename'][row],win32security.DACL_SECURITY_INFORMATION, access_info)
+            print("File %s is now protected." % dlp_file['filename'][row])
+
+        elif dlp_file['tags'][row] == 'public':
+            # function to get and set ACL
+            access_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],win32security.DACL_SECURITY_INFORMATION)
+            # function to get owner info of a file
+            owner_info = win32security.GetFileSecurity(directory + dlp_file['filename'][row],win32security.OWNER_SECURITY_INFORMATION)
+
+            # lookup for SID of user
+            everyone, domain, type = win32security.LookupAccountName("", "Everyone")
+            admins, domain, type = win32security.LookupAccountName("", "Administrators")
+            owner_sid = owner_info.GetSecurityDescriptorOwner()
+
+            # set permission
+            dacl = win32security.ACL()
+            dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, everyone)
+
+            # EXECUTE ORDER 66!!!
+            access_info.SetSecurityDescriptorDacl(1, dacl, 0)
+            win32security.SetFileSecurity(directory + dlp_file['filename'][row],win32security.DACL_SECURITY_INFORMATION, access_info)
+
+def run_all():
     changes = []
     list_files = {'filename': [], 'tags': []}
     files = ''
 
-    ##Training
+    # Training
     if is_first_run():
         print("No H5 model found, training our ML system according to your file")
         try:
@@ -299,21 +345,21 @@ if __name__ == '__main__':
             pass
         make_dataset(list_files)
         trainer()
-        h5_file = 'model.h5'
-        h5json_file = 'model.json'
-        tokenizer_file = 'tokenizer.pickle'
+        h5_file = ps.get('machine_learning', 'h5')
+        h5json_file = ps.get('machine_learning', 'weight')
+        tokenizer_file = ps.get('pickle_file', 'pickle')
 
-    #Checking
+    # Checking
     try:
         while True:
             list = []
-            clog = open('clog.txt','r')
+            clog = open('clog.txt', 'r')
             for line in clog:
                 line = line.split(', ')
                 line = ''.join(line[-1:]).strip()
                 changes.append(line)
             changes = list_dupe_del(changes)
-            #biar clog.txt-nya bersih
+            # biar clog.txt-nya bersih
             # clog = open('clog.txt','w')
             # clog.close()
 
@@ -321,7 +367,11 @@ if __name__ == '__main__':
             make_dataset(list)
             print('list making complete, going into checking session')
             checker()
+            acl()
             time.sleep(600)
 
     except ValueError as e:
         print(e)
+
+if __name__ == '__main__':
+    run_all()

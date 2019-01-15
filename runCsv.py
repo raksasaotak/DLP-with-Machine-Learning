@@ -5,10 +5,23 @@ from PyQt5.QtGui import QImage, QPainter, QIcon, QKeySequence, QIcon, QTextCurso
     QTextTableFormat, QColor
 from PyQt5.QtCore import QFile, QSettings, Qt, QFileInfo, QItemSelectionModel, QDir, QMetaObject
 from PyQt5.QtWidgets import (QMainWindow, QAction, QWidget, QLineEdit, QMessageBox, QAbstractItemView, QApplication,
-                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog)
+                             QTableWidget, QTableWidgetItem, QGridLayout, QFileDialog, QMenu, QInputDialog, QDialog)
 
 import sys
 
+maxInt = sys.maxsize
+decrement = True
+
+while decrement:
+    # decrease the maxInt value by factor 10
+    # as long as the OverflowError occurs.
+
+    decrement = False
+    try:
+        csv.field_size_limit(maxInt)
+    except OverflowError:
+        maxInt = int(maxInt/10)
+        decrement = True
 
 class TableWidgetDragRows(QTableWidget):
     def __init__(self, *args, **kwargs):
@@ -452,7 +465,7 @@ class MyWindow(QMainWindow):
     def removeRow(self):
         if self.tableView.rowCount() > 0:
             row = self.selectedRow()
-            tableView.removeRow(row)
+            self.tableView.removeRow(row)
             self.isChanged = True
 
     def addRow(self):
