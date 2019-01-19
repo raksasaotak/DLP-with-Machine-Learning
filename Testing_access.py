@@ -2,17 +2,19 @@ import os
 import win32security
 import ntsecuritycon as con
 import pandas as pd
-
+import configparser
 #ALWAYS RUN THIS SCRIPT AS ADMIN OTHERWISE YOU CANT CHANGE OTHERS PERMISSION
 
+ps = configparser.ConfigParser()
+ps.read('testong.ini')
 #show accesss control list, from a file
 def show_cacls (filename):
     for line in os.popen("cacls %s" % filename).read().splitlines():
         print(line)
 
 if __name__ == '__main__':
-    dlp_file = pd.read_csv('dlp.csv')
-    directory = 'C:\\Users\\Samuel\\PycharmProjects\\dlp\\fix\\'
+    dlp_file = pd.read_csv('acl.csv')
+    directory = ps.get('folder_protect', 'folder') + '/'
     for row in range(0, len(dlp_file)):
         if(dlp_file['tags'][row] == 'confidential'):
             #fucntion to get and set ACL
