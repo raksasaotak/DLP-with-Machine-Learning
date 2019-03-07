@@ -73,6 +73,7 @@ class App(QMainWindow, QWidget):
         self.height = Height
         self.initUI()
         self.gui = gui()
+        self.watcher = watcher()
 
     def initUI(self):
         self.setWindowTitle(self.title)
@@ -150,10 +151,11 @@ class App(QMainWindow, QWidget):
 
     @pyqtSlot()
     def run_Service(self):
+        self.gui.show()
+        self.watcher.show()
         # os.system('python Predictor.py')
         # os.system('python watcher.py')
         # os.system('python test.py')
-        self.gui.show()
 
     def run_Csv(self):
         os.system('python runCsv.py acl.csv')
@@ -214,10 +216,54 @@ class gui(QtWidgets.QMainWindow):
         # `start` takes the exec and a list of arguments
         self.process.start('python',['predictor.py'])
 
+
     def initUI(self):
         # Layout are better for placing widgets
+        self.setWindowTitle('Prediction Program')
         layout = QtWidgets.QHBoxLayout()
-        self.runButton = QtWidgets.QPushButton('Run')
+        self.runButton = QtWidgets.QPushButton('Run ML')
+        self.runButton.clicked.connect(self.callProgram)
+
+        self.output = QtWidgets.QTextEdit()
+
+        layout.addWidget(self.output)
+        layout.addWidget(self.runButton)
+
+        centralWidget = QtWidgets.QWidget()
+        centralWidget.setLayout(layout)
+        self.setCentralWidget(centralWidget)
+
+        # QProcess object for external app
+        self.process = QtCore.QProcess(self)
+        # QProcess emits `readyRead` when there is data to be read
+        self.process.readyRead.connect(self.dataReady)
+
+        # Just to prevent accidentally running multiple times
+        # Disable the button when process starts, and enable it when it finishes
+        self.process.started.connect(lambda: self.runButton.setEnabled(False))
+        self.process.finished.connect(lambda: self.runButton.setEnabled(True))
+
+class watcher(QtWidgets.QMainWindow):
+    def __init__(self):
+        super(watcher, self).__init__()
+        self.initUI()
+
+    def dataReady(self):
+        cursor = self.output.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.insertText(str(self.process.readAll(), 'utf-8'))
+        self.output.ensureCursorVisible()
+
+    def callProgram(self):
+        # run the process
+        # `start` takes the exec and a list of arguments
+        self.process.start('python',['watcher.py'])
+
+    def initUI(self):
+        # Layout are better for placing widgets
+        self.setWindowTitle('Watcher Program')
+        layout = QtWidgets.QHBoxLayout()
+        self.runButton = QtWidgets.QPushButton('Run Watcher')
         self.runButton.clicked.connect(self.callProgram)
 
         self.output = QtWidgets.QTextEdit()

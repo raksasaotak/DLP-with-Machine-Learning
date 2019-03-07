@@ -401,7 +401,7 @@ class MyWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(self, 'Save File', QDir.homePath() + "/export.csv",
                                               "CSV Files(*.csv *.txt)")
         if path:
-            with open(path, 'w') as stream:
+            with open(path, 'wb', newline='') as stream:
                 print("saving", path)
                 writer = csv.writer(stream, delimiter=self.delimit)
                 for row in range(self.tableView.rowCount()):
@@ -411,8 +411,10 @@ class MyWindow(QMainWindow):
                         if item is not None:
                             rowdata.append(item.text())
                         else:
-                            rowdata.append('')
-                    writer.writerow(rowdata)
+                            continue
+                for row in rowdata:
+                    writer.writerow(row.strip('\r\n'))
+            stream.close()
         self.isChanged = False
         self.setCurrentFile(path)
 
@@ -728,7 +730,7 @@ class MyWindow(QMainWindow):
             self.writeCsv()
         else:
             path = self.fileName
-            with open(path, 'w') as stream:
+            with open(path, 'w', newline='') as stream:
                 print("saving", path)
                 writer = csv.writer(stream, delimiter=self.delimit)
                 for row in range(self.tableView.rowCount()):
@@ -738,7 +740,7 @@ class MyWindow(QMainWindow):
                         if item is not None:
                             rowdata.append(item.text())
                         else:
-                            rowdata.append('')
+                            continue
                     writer.writerow(rowdata)
         self.isChanged = False
 

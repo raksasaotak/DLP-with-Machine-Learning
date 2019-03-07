@@ -30,8 +30,9 @@ while decrement:
     try:
         csv.field_size_limit(maxInt)
     except OverflowError:
-        maxInt = int(maxInt/10)
+        maxInt = int(maxInt / 10)
         decrement = True
+
 
 ##TODO Dokumentasi Codingan, buat variabel rapi
 
@@ -164,7 +165,7 @@ class dlp():
         pred = loaded_model.predict(np.array(x_post))
         for i in range(0, len(post)):
             print("Document %s is %s sentiment; %f%% confidence" % (
-            data['filename'][i], text_labels[np.argmax(pred[i])], pred[i][np.argmax(pred[i])] * 100))
+                data['filename'][i], text_labels[np.argmax(pred[i])], pred[i][np.argmax(pred[i])] * 100))
             predicted_data['filename'].append(data['filename'][i].encode("utf-8", "surrogateescape").decode())
             predicted_data['tags'].append(text_labels[np.argmax(pred[i])].encode("utf-8", "surrogateescape").decode())
 
@@ -229,9 +230,9 @@ class dlp():
 
         model.add(Dense(num_labels))
         model.add(BatchNormalization())
-        model.add(Activation('softmax'))
+        model.add(Activation('sigmoid'))
 
-        model.compile(loss='sparse_categorical_crossentropy',
+        model.compile(loss='binary_crossentropy',
                       optimizer='adam',
                       metrics=['accuracy'])
 
@@ -270,15 +271,16 @@ class dlp():
         loaded_model.load_weights("model.h5")
         print("Loaded model from disk")
 
-        loaded_model.compile(loss='sparse_categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+        loaded_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         score = loaded_model.evaluate(x_test, y_test, verbose=1)
         print("%s: %.2f%%" % (loaded_model.metrics_names[1], score[1] * 100))
 
-    def relearn(dict_csv='dlp.csv'):
-        lists = pd.read_csv(dict_csv, engine='python')
+    def relearn(dict_csv='dlp.csv', acl_csv='acl.csv'):
+        old_lists = pd.read_csv(dict_csv, engine='python')
+        new_lists = pd.read_csv(acl_csv, engine='python')
         new_dict = {'filename': [], 'tags': []}
-        new_dict['filename'].extend(lists['filename'])
-        new_dict['tags'].extend(lists['tags'])
+        new_dict['filename'].extend(old_lists['filename'])
+        new_dict['tags'].extend(old_lists['tags'])
         dlp.make_dataset(new_dict)
         dlp.trainer()
 
@@ -385,6 +387,7 @@ class dlp():
 
         except ValueError as e:
             print(e)
+
 
 if __name__ == '__main__':
     dlp.run_all()
